@@ -1,4 +1,4 @@
-# The Entityclassifier.eu Project
+# The Entityclassifier.eu Core Framework
 
 We are gradually open sourcing the code.
 
