@@ -1,1 +1,5 @@
 /target/
+src/main/java/cz/vse/fis/keg/entityclassifier/core/grammars/settings-prod.ini
+src/main/java/cz/vse/fis/keg/entityclassifier/core/grammars/settings.ini
+src/main/java/cz/vse/fis/keg/entityclassifier/core/grammars/settings-ner-dev.ini
+settings-dev.ini
