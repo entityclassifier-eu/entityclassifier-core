@@ -1,0 +1,42 @@
+Phase:	EntityAnnotation
+Input:  Token
+Options: control=appelt
+
+Rule: EntityExtractionRule1
+Priority: 100
+(
+({Token.category == "NNP"})+
+)
+:entityString
+-->
+:entityString.ne = {name="NNP+ rule"}
+
+Rule: EntityExtractionRule2
+Priority: 100
+(
+({Token.category == "JJ"})*
+({Token.category == "NN"})+
+)
+:entityString
+-->
+:entityString.e = {name="JJ* NN+ rule"}
+
+Rule: EntityExtractionRule3
+Priority: 100
+(
+({Token.category == "JJ"})*
+({Token.category == "NNS"})+
+)
+:entityString
+-->
+:entityString.e = {name="JJ* NNS+ rule"}
+
+Rule: EntityExtractionRule4
+Priority: 110
+(
+({Token.orth == "upperInitial"}{Token.kind == "punctuation", Token.string == "."})
+({Token.orth == "upperInitial"}{Token.kind == "punctuation", Token.string == "."})+
+)
+:entityString
+-->
+:entityString.ne = {name="single-character entity"}
