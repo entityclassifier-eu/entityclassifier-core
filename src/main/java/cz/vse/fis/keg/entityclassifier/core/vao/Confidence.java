@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlValue;
 public class Confidence {
     
     protected String value;
-    private String confType;
+    private String type;
     private String bounds;
 
     /**
@@ -39,15 +39,15 @@ public class Confidence {
     /**
      * @return the confType
      */
-    public String getConfType() {
-        return confType;
+    public String getType() {
+        return type;
     }
 
     /**
      * @param confType the confType to set
      */
-    public void setConfType(String confType) {
-        this.confType = confType;
+    public void setType(String type) {
+        this.type = type;
     }
 
     /**

@@ -89,7 +89,7 @@ public class WikipediaSearch {
                 //System.out.println("Not supported language");
                 return result;
             }
-//            System.out.println(url.toString());
+            System.out.println(url.toString());
         } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(WikipediaSearch.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MalformedURLException ex) {
@@ -108,7 +108,7 @@ public class WikipediaSearch {
             }
             in.close();
             isr.close();
-            
+            System.out.println(buffer.toString());
             Pattern searchElm = Pattern.compile("<search>(.*?)</search>", Pattern.DOTALL);
             Matcher searchElmMatcher = searchElm.matcher(buffer.toString());
             if(!searchElmMatcher.find()){

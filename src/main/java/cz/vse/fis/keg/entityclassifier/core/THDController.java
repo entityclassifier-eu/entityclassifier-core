@@ -61,6 +61,7 @@ public class THDController {
     }
 
     private void loadSettings() {
+        System.out.println("loading properties...");
         Properties prop = new PropertiesLoader().getProperties();
         readSettings(prop);        
     }
@@ -71,7 +72,7 @@ public class THDController {
         Settings.PLUGINS_HOME = prop.getProperty("pluginHome");
         
         Settings.POOL_SIZE = Integer.parseInt(prop.getProperty("workerPoolSize"));
-
+        
         Settings.EN_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("enEntityExtractionGrammar");
         Settings.NL_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("nlEntityExtractionGrammar");
         Settings.DE_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("deEntityExtractionGrammar");
@@ -104,7 +105,6 @@ public class THDController {
         DBpediaOntologyMapper.setEnMappingsLocation(prop.getProperty("en_inferred_mappings"));
         DBpediaOntologyMapper.setDeMappingsLocation(prop.getProperty("de_inferred_mappings"));
         DBpediaOntologyMapper.setNlMappingsLocation(prop.getProperty("nl_inferred_mappings"));
-
         YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
 
         Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Settings loaded.");            

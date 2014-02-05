@@ -48,6 +48,7 @@ public class RedisClient {
         /*maximum time in milliseconds to wait when the exhaust action is set to block*/  
         jedisPoolConfig.setMaxWait(3000);  
         jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
+        System.out.println("Redis was sucessfully configured.");
     }
 
     public String getValue(String key) {

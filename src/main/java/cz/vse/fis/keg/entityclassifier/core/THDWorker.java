@@ -101,6 +101,7 @@ public class THDWorker {
 
 //                        System.out.println("not found in cache");
                         entity_title = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
+                        System.out.println("yes: " + entity_title);
                         if(entity_title != null) {
 //                        System.out.println(entity_title);
                             redis.setKey(entityString + lang + "linkedHypernymsDataset", entity_title);
@@ -196,13 +197,15 @@ public class THDWorker {
 //                    System.out.println("entity title not null");
                     // entity mapped, checking types
                     ArrayList<Hypernym> hypernymsList = null;
-                    
+                    System.out.println("extracting types...");
                     if (knowledge_base.equals("live")) {
                         hypernymsList = extractEntityTypes(entity_title, lang, "live", provenance);                    
                     } else if (knowledge_base.equals("local")) {                    
                         hypernymsList = extractEntityTypes(entity_title, lang, "local", provenance);                    
                     } else if (knowledge_base.equals("linkedHypernymsDataset")) {
+                        System.out.println("extracting types...");
                         hypernymsList = extractEntityTypes(entity_title, lang, "linkedHypernymsDataset", provenance);
+                        System.out.println("extracted types..." + hypernymsList.size());
                     }
                         
                     if (hypernymsList.size() > 0) {
@@ -225,7 +228,7 @@ public class THDWorker {
                             Confidence c = new Confidence();
                             c.setValue(h.getAccuracy());
                             c.setBounds(h.getBounds());
-                            c.setConfType("extraction");
+                            c.setType("extraction");
                             type.setConfidence(c);
                             type.setProvenance(h.getOrigin());
                             entityTypes.add(type);
