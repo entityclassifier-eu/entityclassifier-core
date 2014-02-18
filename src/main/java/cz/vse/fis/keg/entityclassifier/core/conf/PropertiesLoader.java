@@ -25,16 +25,17 @@ public class PropertiesLoader {
             
             Properties prop = new Properties();
 //            URL url =  this.getClass().getResource("/resources/settings-prod.ini");
-            System.out.println(this.getClass().getName());
-            System.out.println(this.getClass().getCanonicalName());
-            System.out.println(this.getClass().getResource("/resources/settings-dev.ini"));
+//            System.out.println(this.getClass().getName());
+//            System.out.println(this.getClass().getCanonicalName());
+//            System.out.println(this.getClass().getResource("/resources/settings-dev.ini"));
 //            URL url =  this.getClass().getResource("/cz/vse/fis/keg/entityclassifier/core/conf/settings-dev.ini");
 //            System.out.println(url.toURI().toString());
 //            System.out.println(url.getFile());
 //            URL url =  this.getClass().getResource("/Users/Milan/Documents/research/repositories/entityclassifier-core/src/main/java/cz/vse/fis/keg/entityclassifier/core/conf/settings-dev.ini");
 //            System.out.println(url.getFile());
-            URL url =  this.getClass().getResource("/resources/settings-dev.ini");
-            System.out.println(url.toString());
+//            URL url =  this.getClass().getResource("/resources/settings-dev.ini");
+            URL url =  this.getClass().getResource("/resources/settings-ner-dev.ini");
+//            System.out.println(url.toString());
             prop.load(new FileInputStream(new File(url.getFile())));
 
             return prop;

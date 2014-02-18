@@ -33,14 +33,14 @@ public class TextProcessor {
         return txtProcessor;
     }
     
-    public ArrayList<Hypernym> processText_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking){
+    public ArrayList<Hypernym> processText_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter){
         
         ArrayList<Hypernym> result = new ArrayList<Hypernym>();
         THDWorker worker = null;
         
         try {
             worker = THDController.getInstance().getTHDWorker();
-            result = worker.processText_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking);
+            result = worker.processText_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking, typesFilter);
         } catch (InterruptedException ex) {
             Logger.getLogger(TextProcessor.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MalformedURLException ex) {
@@ -55,13 +55,13 @@ public class TextProcessor {
         }
     }
 
-    public ArrayList<Entity> processTextAPI_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking) {
+    public ArrayList<Entity> processTextAPI_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter) {
         
        ArrayList<Entity> result = new ArrayList<Entity>();
        THDWorker worker = null;
        try {           
            worker = THDController.getInstance().getTHDWorker();
-           result = worker.processTextAPI_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking);
+           result = worker.processTextAPI_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking, typesFilter);
         } catch (InterruptedException ex) {
             Logger.getLogger(TextProcessor.class.getName()).log(Level.SEVERE, null, ex);
             throw ex;

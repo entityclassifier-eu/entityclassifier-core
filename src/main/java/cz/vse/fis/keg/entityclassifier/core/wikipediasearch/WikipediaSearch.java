@@ -108,7 +108,7 @@ public class WikipediaSearch {
             }
             in.close();
             isr.close();
-            System.out.println(buffer.toString());
+//            System.out.println(buffer.toString());
             Pattern searchElm = Pattern.compile("<search>(.*?)</search>", Pattern.DOTALL);
             Matcher searchElmMatcher = searchElm.matcher(buffer.toString());
             if(!searchElmMatcher.find()){
