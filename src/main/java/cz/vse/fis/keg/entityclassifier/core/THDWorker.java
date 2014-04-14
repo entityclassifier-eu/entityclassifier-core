@@ -392,7 +392,7 @@ public class THDWorker {
                                 redis.setKey(entityString + lang + "linkedHypernymsDataset", entity_title);
                             }
                         } else {
-                            System.out.println("found in cache: " + entity_title);
+//                            System.out.println("found in cache: " + entity_title);
                         }
                     }else if(knowledge_base.equals("live")) {
                         entity_title = redis.getValue(entityString + lang + "live");

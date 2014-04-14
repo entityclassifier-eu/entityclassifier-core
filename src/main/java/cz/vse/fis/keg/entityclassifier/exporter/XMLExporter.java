@@ -86,7 +86,7 @@ public class XMLExporter {
                 
                 if(types != null) {
                     
-                    System.out.println(e.getTypes().size());
+//                    System.out.println(e.getTypes().size());
                     
                     for(Type t : types) {
 
@@ -96,15 +96,15 @@ public class XMLExporter {
                         // create element <typeLabel>
                         Element typeLabelEl = doc.createElement("typeLabel");
                         String tLabel = t.getTypeLabel();
-                        System.out.println("type label" + t.getTypeLabel());
+//                        System.out.println("type label" + t.getTypeLabel());
                         if(tLabel != null){
                             typeLabelEl.appendChild(doc.createTextNode(t.getTypeLabel()));
+                            typeEl.appendChild(typeLabelEl);
                         }
-                        typeEl.appendChild(typeLabelEl);
 
                         // create element <typeURI>
                         Element typeURIEl = doc.createElement("typeURI");
-                        System.out.println("type URI" + t.getTypeURI());
+//                        System.out.println("type URI" + t.getTypeURI());
                         String tURI = t.getTypeURI();
                         if(tURI != null){
                             typeURIEl.appendChild(doc.createTextNode(t.getTypeURI()));
@@ -113,13 +113,13 @@ public class XMLExporter {
 
                         // create element <entityLabel>
                         Element entityLabelEl = doc.createElement("entityLabel");
-                        System.out.println("entity label" + t.getEntityLabel());
+//                        System.out.println("entity label" + t.getEntityLabel());
                         entityLabelEl.appendChild(doc.createTextNode(t.getEntityLabel()));
                         typeEl.appendChild(entityLabelEl);
 
                         // create element <entityURI>            
                         Element entityURIEl = doc.createElement("entityURI");
-                        System.out.println("entity URI" + t.getEntityURI());
+//                        System.out.println("entity URI" + t.getEntityURI());
                         entityURIEl.appendChild(doc.createTextNode(t.getEntityURI()));
                         typeEl.appendChild(entityURIEl);
 
@@ -127,18 +127,24 @@ public class XMLExporter {
                         Confidence conf = t.getConfidence();
                         if(conf != null) {
                             Element confidenceEl = doc.createElement("confidence");
-                            System.out.println("conf val" + conf.getValue());
-                            confidenceEl.appendChild(doc.createTextNode(conf.getValue()));
-                            System.out.println("conf type" + conf.getType());
-                            confidenceEl.setAttribute("type", conf.getType());
-                            System.out.println("conf bounds" + conf.getBounds());
-                            confidenceEl.setAttribute("bounds", conf.getBounds());
-                            typeEl.appendChild(confidenceEl);
+                            if(conf.getValue() != null) {
+//                                System.out.println("conf val" + conf.getValue());
+                                confidenceEl.appendChild(doc.createTextNode(conf.getValue()));
+                            }
+                            if(conf.getType() != null) {
+//                                System.out.println("conf type" + conf.getType());
+                                confidenceEl.setAttribute("type", conf.getType());
+                            }
+                            if(conf.getBounds() != null) {
+//                                System.out.println("conf bounds" + conf.getBounds());
+                                confidenceEl.setAttribute("bounds", conf.getBounds());
+                                typeEl.appendChild(confidenceEl);
+                            }
                         }
 
                         // create element <provenance>
                         Element provenanceEl = doc.createElement("provenance");
-                        System.out.println(t.getProvenance());
+//                        System.out.println("prov: " + t.getProvenance());
                         provenanceEl.appendChild(doc.createTextNode(t.getProvenance()));
                         typeEl.appendChild(provenanceEl);
                         
@@ -163,7 +169,7 @@ public class XMLExporter {
             transformer.transform(source, result);
 
             xmlResult = sw.toString();
-            System.out.println(xmlResult);
+//            System.out.println(xmlResult);
             return xmlResult;
         
         } catch (ParserConfigurationException ex) {
