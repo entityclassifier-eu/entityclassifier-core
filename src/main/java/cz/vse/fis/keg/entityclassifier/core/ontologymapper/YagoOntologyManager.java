@@ -30,6 +30,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -93,9 +94,9 @@ public class YagoOntologyManager {
         return manager;
     }
     
-    public ArrayList<Hypernym> getYagoHypernyms(String entityTitle, String entityURI, String lang, String origin){
+    public HashSet getYagoHypernyms(String entityTitle, String entityURI, String lang, String origin){
         
-        ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
+        HashSet hypernymsList = new HashSet();
         try {
         DBCursor cursor = db.getCollection("entities_yago").find(new BasicDBObject().append("uri", entityURI));
         Model mainModel = ModelFactory.createDefaultModel();

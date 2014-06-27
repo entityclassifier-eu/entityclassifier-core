@@ -55,16 +55,22 @@ public class DBpediaOntologyManager {
                 Literal res = (Literal) iter2.next().getObject();                
                 String tmpLang = res.getLanguage();
                 
-                if(tmpLang.equals("en") && lang.equals("en")){
+                if( tmpLang.equals("en") ){
                     record.setLabel(res.getString());
                     return record;
-                } else if(tmpLang.equals("de") && lang.equals("de")){
-                    record.setLabel(res.getString());
-                    return record;
-                } else if(tmpLang.equals("nl") && lang.equals("nl")){
-                    record.setLabel(res.getString());
-                    return record;
-                }                    
+                    
+                }
+                
+//                if(tmpLang.equals("en") && lang.equals("en")){
+//                    record.setLabel(res.getString());
+//                    return record;
+//                } else if(tmpLang.equals("de") && lang.equals("de")){
+//                    record.setLabel(res.getString());
+//                    return record;
+//                } else if(tmpLang.equals("nl") && lang.equals("nl")){
+//                    record.setLabel(res.getString());
+//                    return record;
+//                }                    
             }
         }
 //        System.out.println("ending here");

@@ -9,6 +9,7 @@ import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
 import cz.vse.fis.keg.entityclassifier.core.conf.PropertiesLoader;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyManager;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyMapper;
+import cz.vse.fis.keg.entityclassifier.core.ontologymapper.TypeMapper;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.YagoOntologyManager;
 import gate.CreoleRegister;
 import gate.Gate;
@@ -101,12 +102,14 @@ public class THDController {
         Settings.NL_WIKIPEDIA_LIVE_API = prop.getProperty("nl_wikipedia_live_api");
         
         DBpediaOntologyManager.setDbpediaOntologyFileLocation(prop.getProperty("dbpediaOntologyFileLocation"));
+        YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
         
         DBpediaOntologyMapper.setEnMappingsLocation(prop.getProperty("en_inferred_mappings"));
         DBpediaOntologyMapper.setDeMappingsLocation(prop.getProperty("de_inferred_mappings"));
         DBpediaOntologyMapper.setNlMappingsLocation(prop.getProperty("nl_inferred_mappings"));
-        YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
-
+        
+        TypeMapper.getInstance().init();
+        
         Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Settings loaded.");            
     }
 

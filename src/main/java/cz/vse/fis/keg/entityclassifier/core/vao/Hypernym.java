@@ -27,6 +27,10 @@ public class Hypernym {
     private String accuracy;
     private String bounds;
     
+    @Override
+    public Hypernym clone() throws CloneNotSupportedException {
+        return (Hypernym)super.clone();
+    }
     /**
      * @return the type
      */
@@ -236,33 +240,28 @@ public class Hypernym {
     public int hashCode()
     {
 //        System.out.println("hash");
-        return entity.hashCode() +
-                entityURL.hashCode() +
-                type.hashCode() +
-                typeURL.hashCode();
+        return
+//                entity.hashCode() +
+                this.getEntityURL().hashCode() +
+//                type.hashCode() +
+                this.getTypeURL().hashCode() + 
+                this.getOrigin().hashCode();
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
+    public boolean equals(Object objc) {
+
+        Hypernym obj = (Hypernym)objc;
+        if (
+//                obj.getType().equals(this.getType()) &&
+                obj.getTypeURL().equals(this.getTypeURL()) &&
+//                obj.getEntity().equals(this.getEntity()) &&
+                obj.getEntityURL().equals(this.getEntityURL()) &&
+                obj.getOrigin().equals(this.getOrigin())
+                ) {
+            return true;
+        } else {
             return false;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Hypernym other = (Hypernym) obj;
-        if (!Objects.equals(this.type, other.type)) {
-            return false;
-        }
-        if (!Objects.equals(this.typeURL, other.typeURL)) {
-            return false;
-        }
-        if (!Objects.equals(this.entity, other.entity)) {
-            return false;
-        }
-        if (!Objects.equals(this.entityURL, other.entityURL)) {
-            return false;
-        }
-        return true;
     }
 }
