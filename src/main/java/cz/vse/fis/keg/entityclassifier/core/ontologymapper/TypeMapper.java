@@ -29,9 +29,55 @@ import java.util.logging.Logger;
 public class TypeMapper {
     
     private static TypeMapper instance = null;
+
+    /**
+     * @return the en_inferred_mappings
+     */
+    private static String getEn_inferred_mappings() {
+        return en_inferred_mappings;
+    }
+
+    /**
+     * @param aEn_inferred_mappings the en_inferred_mappings to set
+     */
+    public static void setEn_inferred_mappings(String aEn_inferred_mappings) {
+        en_inferred_mappings = aEn_inferred_mappings;
+    }
+
+    /**
+     * @return the de_inferred_mappings
+     */
+    public static String getDe_inferred_mappings() {
+        return de_inferred_mappings;
+    }
+
+    /**
+     * @param aDe_inferred_mappings the de_inferred_mappings to set
+     */
+    public static void setDe_inferred_mappings(String aDe_inferred_mappings) {
+        de_inferred_mappings = aDe_inferred_mappings;
+    }
+
+    /**
+     * @return the nl_inferred_mappings
+     */
+    public static String getNl_inferred_mappings() {
+        return nl_inferred_mappings;
+    }
+
+    /**
+     * @param aNl_inferred_mappings the nl_inferred_mappings to set
+     */
+    public static void setNl_inferred_mappings(String aNl_inferred_mappings) {
+        nl_inferred_mappings = aNl_inferred_mappings;
+    }
     private  Model enModel = null;
     private  Model deModel = null;
     private  Model nlModel = null;
+    
+    private static String en_inferred_mappings;
+    private static String de_inferred_mappings;
+    private static String nl_inferred_mappings;
     
     public static TypeMapper getInstance(){
         if(instance == null) {
@@ -44,15 +90,15 @@ public class TypeMapper {
         try {
             
             enModel = ModelFactory.createDefaultModel();
-            InputStream inEn = FileManager.get().open( "/Users/Milan/Documents/research/repositories/linked-tv/code/thd-v04/scripts/datasets/lhd-2.3.8/other/en.temp.draft/en.inferredmappingstoDBpedia.nt");
+            InputStream inEn = FileManager.get().open( en_inferred_mappings );
             enModel.read(inEn, null, "N-TRIPLE");
             
             deModel = ModelFactory.createDefaultModel();
-            InputStream inDe = FileManager.get().open( "/Users/Milan/Documents/research/repositories/linked-tv/code/thd-v04/scripts/datasets/lhd-2.3.8/other/de.temp.draft/de.inferredmappingstoDBpedia.nt");
+            InputStream inDe = FileManager.get().open( de_inferred_mappings );
             deModel.read(inDe, null, "N-TRIPLE");
             
             nlModel = ModelFactory.createDefaultModel();
-            InputStream inNl = FileManager.get().open( "/Users/Milan/Documents/research/repositories/linked-tv/code/thd-v04/scripts/datasets/lhd-2.3.8/other/nl.temp.draft/nl.inferredmappingstoDBpedia.nt");
+            InputStream inNl = FileManager.get().open( nl_inferred_mappings );
             nlModel.read(inNl, null, "N-TRIPLE");
             
             inEn.close();

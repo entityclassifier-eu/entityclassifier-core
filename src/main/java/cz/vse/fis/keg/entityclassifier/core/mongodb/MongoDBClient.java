@@ -23,7 +23,7 @@ public class MongoDBClient {
     public static DB getDBInstance() throws UnknownHostException{
         if(db == null){
             init();
-            db = mongoClient.getDB( "thddb4" );
+            db = mongoClient.getDB( "thddb" );
         }
         return db;
     }
@@ -31,7 +31,7 @@ public class MongoDBClient {
     public static MongoClient getClient() throws UnknownHostException{
         if(db == null){
             init();
-            db = mongoClient.getDB( "thddb4" );
+            db = mongoClient.getDB( "thddb" );
         }
         return mongoClient;
     }

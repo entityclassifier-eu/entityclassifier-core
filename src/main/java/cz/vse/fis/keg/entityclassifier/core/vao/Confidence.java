@@ -18,21 +18,20 @@ import javax.xml.bind.annotation.XmlValue;
  */
 public class Confidence {
     
-    protected String value;
+    private double value;
     private String type;
-    private String bounds;
 
     /**
      * @return the value
      */
-    public String getValue() {
+    public double getValue() {
         return value;
     }
 
     /**
      * @param value the value to set
      */
-    public void setValue(String value) {
+    public void setValue(double value) {
         this.value = value;
     }
 
@@ -50,17 +49,4 @@ public class Confidence {
         this.type = type;
     }
 
-    /**
-     * @return the bounds
-     */
-    public String getBounds() {
-        return bounds;
-    }
-
-    /**
-     * @param bounds the bounds to set
-     */
-    public void setBounds(String bounds) {
-        this.bounds = bounds;
-    }
 }

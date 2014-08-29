@@ -101,14 +101,26 @@ public class THDController {
         Settings.DE_WIKIPEDIA_LIVE_API = prop.getProperty("de_wikipedia_live_api");
         Settings.NL_WIKIPEDIA_LIVE_API = prop.getProperty("nl_wikipedia_live_api");
         
+        Settings.EN_LUCENE = prop.getProperty("ENLuceneURL");
+        Settings.DE_LUCENE = prop.getProperty("DELuceneURL");
+        Settings.NL_LUCENE = prop.getProperty("NLLuceneURL");
+        
+        Settings.SALIENCE_DATASET = prop.getProperty("salience_dataset");
+        
         DBpediaOntologyManager.setDbpediaOntologyFileLocation(prop.getProperty("dbpediaOntologyFileLocation"));
         YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
+                
+//        DBpediaOntologyMapper.setEnMappingsLocation(prop.getProperty("en_inferred_mappings"));
+//        DBpediaOntologyMapper.setDeMappingsLocation(prop.getProperty("de_inferred_mappings"));
+//        DBpediaOntologyMapper.setNlMappingsLocation(prop.getProperty("nl_inferred_mappings"));
         
-        DBpediaOntologyMapper.setEnMappingsLocation(prop.getProperty("en_inferred_mappings"));
-        DBpediaOntologyMapper.setDeMappingsLocation(prop.getProperty("de_inferred_mappings"));
-        DBpediaOntologyMapper.setNlMappingsLocation(prop.getProperty("nl_inferred_mappings"));
+        
+        TypeMapper.setEn_inferred_mappings(prop.getProperty("en_inferred_mappings"));
+        TypeMapper.setDe_inferred_mappings(prop.getProperty("de_inferred_mappings"));
+        TypeMapper.setNl_inferred_mappings(prop.getProperty("nl_inferred_mappings"));
         
         TypeMapper.getInstance().init();
+        
         
         Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Settings loaded.");            
     }

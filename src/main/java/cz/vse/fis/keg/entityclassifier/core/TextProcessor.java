@@ -55,13 +55,13 @@ public class TextProcessor {
         }
     }
 
-    public ArrayList<Entity> processTextAPI_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter) {
+    public ArrayList<Entity> processTextAPI_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter, String linkingMethod) {
         
        ArrayList<Entity> result = new ArrayList<Entity>();
        THDWorker worker = null;
        try {           
            worker = THDController.getInstance().getTHDWorker();
-           result = worker.processTextAPI_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking, typesFilter);
+           result = worker.processTextAPI_MT(query, lang, entity_type, knowledge_base, provenance, priorityEntityLinking, typesFilter, linkingMethod);
         } catch (InterruptedException ex) {
             Logger.getLogger(TextProcessor.class.getName()).log(Level.SEVERE, null, ex);
             throw ex;

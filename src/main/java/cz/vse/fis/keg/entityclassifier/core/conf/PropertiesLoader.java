@@ -33,7 +33,8 @@ public class PropertiesLoader {
 //            System.out.println(url.getFile());
 //            URL url =  this.getClass().getResource("/Users/Milan/Documents/research/repositories/entityclassifier-core/src/main/java/cz/vse/fis/keg/entityclassifier/core/conf/settings-dev.ini");
 //            System.out.println(url.getFile());
-            URL url =  this.getClass().getResource("/resources/settings-dev.ini");
+            URL url =  this.getClass().getResource("/resources/settings-prod.ini");
+//            URL url =  this.getClass().getResource("/resources/settings-dev.ini");
 //            URL url =  this.getClass().getResource("/resources/settings-ner-dev.ini");
 //            System.out.println(url.toString());
             prop.load(new FileInputStream(new File(url.getFile())));

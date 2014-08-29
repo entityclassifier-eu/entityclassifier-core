@@ -19,8 +19,10 @@ public class Type {
     private String typeURI;
     private String entityURI;
     private String entityLabel;
-    private Confidence confidence;
+    private Confidence classificationConfidence;
+    private Confidence linkingConfidence;
     private String provenance;
+    private Salience salience;
 
     /**
      * @return the typeLabel
@@ -79,18 +81,18 @@ public class Type {
     }
 
     /**
-     * @return the confidence
+     * @return the classificationConfidence
      */
-    public Confidence getConfidence() {
-        return confidence;
+    public Confidence getClassificationConfidence() {
+        return classificationConfidence;
     }
 
     /**
-     * @param confidence the confidence to set
+     * @param classificationConfidence the classificationConfidence to set
      */
  
-    public void setConfidence(Confidence confidence) {
-        this.confidence = confidence;
+    public void setClassificationConfidence(Confidence classificationConfidence) {
+        this.classificationConfidence = classificationConfidence;
     }
 
     /**
@@ -105,5 +107,33 @@ public class Type {
      */
     public void setEntityLabel(String entityLabel) {
         this.entityLabel = entityLabel;
+    }
+
+    /**
+     * @return the salience
+     */
+    public Salience getSalience() {
+        return salience;
+    }
+
+    /**
+     * @param salience the salience to set
+     */
+    public void setSalience(Salience salience) {
+        this.salience = salience;
+    }
+
+    /**
+     * @return the linkingConfidence
+     */
+    public Confidence getLinkingConfidence() {
+        return linkingConfidence;
+    }
+
+    /**
+     * @param linkingConfidence the linkingConfidence to set
+     */
+    public void setLinkingConfidence(Confidence linkingConfidence) {
+        this.linkingConfidence = linkingConfidence;
     }
 }

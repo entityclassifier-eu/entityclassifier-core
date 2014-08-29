@@ -40,5 +40,11 @@ public class Settings {
     public static String DE_WIKIPEDIA_LIVE_API;
     public static String NL_WIKIPEDIA_LIVE_API;
     
+    public static String EN_LUCENE;
+    public static String DE_LUCENE;
+    public static String NL_LUCENE;    
+    
+    public static String SALIENCE_DATASET;
+    
     public static int POOL_SIZE;
 }

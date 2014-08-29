@@ -8,6 +8,7 @@ package cz.vse.fis.keg.entityclassifier.exporter;
 
 import cz.vse.fis.keg.entityclassifier.core.vao.Confidence;
 import cz.vse.fis.keg.entityclassifier.core.vao.Entity;
+import cz.vse.fis.keg.entityclassifier.core.vao.Salience;
 import cz.vse.fis.keg.entityclassifier.core.vao.Type;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -124,22 +125,53 @@ public class XMLExporter {
                         typeEl.appendChild(entityURIEl);
 
                         // create element <confidence>
-                        Confidence conf = t.getConfidence();
-                        if(conf != null) {
+                        Confidence classificationConf = t.getClassificationConfidence();
+                        if(classificationConf != null) {
                             Element confidenceEl = doc.createElement("confidence");
-                            if(conf.getValue() != null) {
+//                            if(classificationConf.getValue()) {
 //                                System.out.println("conf val" + conf.getValue());
-                                confidenceEl.appendChild(doc.createTextNode(conf.getValue()));
-                            }
-                            if(conf.getType() != null) {
+                                confidenceEl.appendChild(doc.createTextNode(classificationConf.getValue()+""));
+//                            }
+                            if(classificationConf.getType() != null) {
 //                                System.out.println("conf type" + conf.getType());
-                                confidenceEl.setAttribute("type", conf.getType());
+                                confidenceEl.setAttribute("type", classificationConf.getType());
                             }
-                            if(conf.getBounds() != null) {
-//                                System.out.println("conf bounds" + conf.getBounds());
-                                confidenceEl.setAttribute("bounds", conf.getBounds());
-                                typeEl.appendChild(confidenceEl);
+                            typeEl.appendChild(confidenceEl);
+                        }
+                        
+                        // create element <confidence>
+                        Confidence linkingConf = t.getLinkingConfidence();
+                        if(linkingConf != null) {
+                            Element confidenceEl = doc.createElement("confidence");
+//                            if(linkingConf.getValue() != null) {
+//                                System.out.println("conf val" + conf.getValue());
+                                confidenceEl.appendChild(doc.createTextNode(linkingConf.getValue()+""));
+//                            }
+                            if(linkingConf.getType() != null) {
+//                                System.out.println("conf type" + conf.getType());
+                                confidenceEl.setAttribute("type", linkingConf.getType());
                             }
+                            typeEl.appendChild(confidenceEl);
+                        }
+                        
+                        Salience s = t.getSalience();
+                        if(s != null) {
+                            Element salienceEl = doc.createElement("salience");
+                            
+                            Element scoreEl = doc.createElement("score");
+                            scoreEl.appendChild(doc.createTextNode(s.getScore()+""));
+                            salienceEl.appendChild(scoreEl);
+                            
+                            Element confidenceEl = doc.createElement("confidence");
+                            confidenceEl.appendChild(doc.createTextNode(s.getConfidence()+""));
+                            salienceEl.appendChild(confidenceEl);
+
+                            Element classLabelEl = doc.createElement("class");
+                            classLabelEl.appendChild(doc.createTextNode(s.getClassLabel()+""));
+                            salienceEl.appendChild(classLabelEl);
+                            
+                            typeEl.appendChild(salienceEl);
+                            
                         }
 
                         // create element <provenance>
