@@ -1,9 +1,25 @@
-package cz.vse.fis.keg.entityclassifier.core.entitylinking;
-
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
+package cz.vse.fis.keg.entityclassifier.core.entitylinking;
 
 import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
 import java.io.BufferedReader;
@@ -55,16 +71,9 @@ public class WikipediaSearch {
     
     public LinkedEntity findWikipediaArticle(String query, String lang, String kb){
         
-//        System.out.println("Using wikipedia search");
-
-//        long estimatedTotal = 0L;
-//        long start = System.currentTimeMillis();
-//        
-//        System.out.println("query: " + query);
         URL url = null;
         LinkedEntity linkedEntity = null;
        
-//        String query2 = query;
         try {
             query = URLEncoder.encode(query, "UTF-8");
             
@@ -105,16 +114,13 @@ public class WikipediaSearch {
 //                url = new URL(Settings.NL_WIKIPEDIA_LIVE_API + "?action=query&list=search&srwhat=nearmatch&srlimit=1&srsearch="+query+"&titles="+query+"&redirects&format=xml");
             
             } else {
-                //System.out.println("Not supported language");
                 return null;
             }
-//            System.out.println(url.toString());
         } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(WikipediaSearch.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MalformedURLException ex) {
             Logger.getLogger(WikipediaSearch.class.getName()).log(Level.SEVERE, null, ex);
         }
-//        System.out.println("now here");
         try {
             StringBuffer buffer = new StringBuffer();
             URLConnection connection = url.openConnection();
@@ -128,37 +134,14 @@ public class WikipediaSearch {
             }
             in.close();
             isr.close();
-//            System.out.println("res: " + buffer.toString());
-//            Pattern searchElm = Pattern.compile("<search>(.*?)</search>", Pattern.DOTALL);
-//            Matcher searchElmMatcher = searchElm.matcher(buffer.toString());
-//            if(!searchElmMatcher.find()){
-//                return result;
-//            }
-//            System.out.println("passed");
             Pattern articleTitle = Pattern.compile("title=\"(.*?)\"", Pattern.DOTALL);
             Matcher titleMatcher = articleTitle.matcher(buffer.toString());
-//            System.out.println("now here");
             while (titleMatcher.find()) {
                 linkedEntity = new LinkedEntity();
                 linkedEntity.setPageTitle(titleMatcher.group(1));
                 double conf = -1.0;
                 linkedEntity.setConfidence(conf);
-//                System.out.println("now here2");
-//                System.out.println("found:" + linkedEntity.getPageTitle());
             }
-//////////// Code when used other search query ///////////////////////
-//         query: url = new URL(Settings.DE_WIKIPEDIA_LIVE_API + "?action=query&list=search&srwhat=nearmatch&srlimit=1&srsearch="+query+"&titles="+query+"&redirects&format=xml");
-//            Pattern pagesElm = Pattern.compile("<pages>(.*?)</pages>", Pattern.DOTALL);
-//            Matcher pageMatcher = pagesElm.matcher(buffer.toString());            
-//            Pattern titleAttr = Pattern.compile("title=\"(.*?)\"");
-//            
-//            if (pageMatcher.find()) {
-//                String DataElements = pageMatcher.group(1);
-//                Matcher titleMatcher = titleAttr.matcher(DataElements);
-//                if (titleMatcher.find()) {
-//                    result = titleMatcher.group(1);
-//                } 
-//            }
             return linkedEntity;
         } catch (IOException ex) {
             Logger.getLogger(WikipediaSearch.class.getName()).log(Level.SEVERE, null, ex);

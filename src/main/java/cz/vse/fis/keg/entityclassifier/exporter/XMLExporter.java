@@ -1,9 +1,24 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
-
 package cz.vse.fis.keg.entityclassifier.exporter;
 
 import cz.vse.fis.keg.entityclassifier.core.vao.Confidence;
@@ -41,6 +56,113 @@ public class XMLExporter {
             instance = new XMLExporter();
         }
         return instance;
+    }
+
+    public String toXMLOneEntity(List<Entity> entities) {
+        
+        String xmlResult = "";
+        try {
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+            Document doc = docBuilder.newDocument();
+            
+            // create root element "<entities>"
+            Element entityEl = doc.createElement("entity");
+            doc.appendChild(entityEl);
+            
+            if(!entities.isEmpty()) {
+                Entity e = entities.get(0);
+                // create element <entity>
+
+                // create element <underlyingString>
+                Element underlyingStringEl = doc.createElement("underlyingString");
+                underlyingStringEl.appendChild(doc.createTextNode(e.getUnderlyingString()));
+                entityEl.appendChild(underlyingStringEl);
+
+                // create element <types>
+                Element typesEl = doc.createElement("types");
+                ArrayList<Type> types = e.getTypes();                
+                
+                if(types != null ) {
+                    
+                        for(Type t : types) {
+
+                            // create element <type>
+                            Element typeEl = doc.createElement("type");
+
+                            // create element <typeLabel>
+                            Element typeLabelEl = doc.createElement("typeLabel");
+                            String tLabel = t.getTypeLabel();
+                            if(tLabel != null){
+                                typeLabelEl.appendChild(doc.createTextNode(t.getTypeLabel()));
+                                typeEl.appendChild(typeLabelEl);
+                            }
+
+                            // create element <typeURI>
+                            Element typeURIEl = doc.createElement("typeURI");
+                            String tURI = t.getTypeURI();
+                            if(tURI != null){
+                                typeURIEl.appendChild(doc.createTextNode(t.getTypeURI()));
+                                typeEl.appendChild(typeURIEl);
+                            }
+
+                            // create element <entityLabel>
+                            Element entityLabelEl = doc.createElement("entityLabel");
+                            entityLabelEl.appendChild(doc.createTextNode(t.getEntityLabel()));
+                            typeEl.appendChild(entityLabelEl);
+
+                            // create element <entityURI>            
+                            Element entityURIEl = doc.createElement("entityURI");
+                            entityURIEl.appendChild(doc.createTextNode(t.getEntityURI()));
+                            typeEl.appendChild(entityURIEl);
+
+                            // create element <confidence>
+                            Confidence classificationConf = t.getClassificationConfidence();
+                            if(classificationConf != null) {
+                                Element confidenceEl = doc.createElement("confidence");
+                                confidenceEl.appendChild(doc.createTextNode(classificationConf.getValue()+""));
+                                if(classificationConf.getType() != null) {
+                                    confidenceEl.setAttribute("type", classificationConf.getType());
+                                }
+                                typeEl.appendChild(confidenceEl);
+                            }
+
+                            // create element <provenance>
+                            Element provenanceEl = doc.createElement("provenance");
+                            provenanceEl.appendChild(doc.createTextNode(t.getProvenance()));
+                            typeEl.appendChild(provenanceEl);
+                            typesEl.appendChild(typeEl);
+                        }
+                }
+                entityEl.appendChild(typesEl);
+
+            }
+
+            
+            StringWriter sw = new StringWriter();
+            StreamResult result = new StreamResult(sw);
+            
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+            transformer.setOutputProperty(OutputKeys.METHOD,"xml");
+            
+            DOMSource source = new DOMSource(doc);
+            transformer.transform(source, result);
+
+            xmlResult = sw.toString();
+            return xmlResult;
+        
+        } catch (ParserConfigurationException ex) {
+            Logger.getLogger(XMLExporter.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (TransformerConfigurationException ex) {
+            Logger.getLogger(XMLExporter.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (TransformerException ex) {
+            Logger.getLogger(XMLExporter.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+        }
+        return "problem";
     }
     
     public String toXML(List<Entity> entities) {
@@ -87,8 +209,6 @@ public class XMLExporter {
                 
                 if(types != null) {
                     
-//                    System.out.println(e.getTypes().size());
-                    
                     for(Type t : types) {
 
                         // create element <type>
@@ -97,7 +217,6 @@ public class XMLExporter {
                         // create element <typeLabel>
                         Element typeLabelEl = doc.createElement("typeLabel");
                         String tLabel = t.getTypeLabel();
-//                        System.out.println("type label" + t.getTypeLabel());
                         if(tLabel != null){
                             typeLabelEl.appendChild(doc.createTextNode(t.getTypeLabel()));
                             typeEl.appendChild(typeLabelEl);
@@ -105,7 +224,6 @@ public class XMLExporter {
 
                         // create element <typeURI>
                         Element typeURIEl = doc.createElement("typeURI");
-//                        System.out.println("type URI" + t.getTypeURI());
                         String tURI = t.getTypeURI();
                         if(tURI != null){
                             typeURIEl.appendChild(doc.createTextNode(t.getTypeURI()));
@@ -114,13 +232,11 @@ public class XMLExporter {
 
                         // create element <entityLabel>
                         Element entityLabelEl = doc.createElement("entityLabel");
-//                        System.out.println("entity label" + t.getEntityLabel());
                         entityLabelEl.appendChild(doc.createTextNode(t.getEntityLabel()));
                         typeEl.appendChild(entityLabelEl);
 
                         // create element <entityURI>            
                         Element entityURIEl = doc.createElement("entityURI");
-//                        System.out.println("entity URI" + t.getEntityURI());
                         entityURIEl.appendChild(doc.createTextNode(t.getEntityURI()));
                         typeEl.appendChild(entityURIEl);
 
@@ -128,12 +244,8 @@ public class XMLExporter {
                         Confidence classificationConf = t.getClassificationConfidence();
                         if(classificationConf != null) {
                             Element confidenceEl = doc.createElement("confidence");
-//                            if(classificationConf.getValue()) {
-//                                System.out.println("conf val" + conf.getValue());
-                                confidenceEl.appendChild(doc.createTextNode(classificationConf.getValue()+""));
-//                            }
+                            confidenceEl.appendChild(doc.createTextNode(classificationConf.getValue()+""));
                             if(classificationConf.getType() != null) {
-//                                System.out.println("conf type" + conf.getType());
                                 confidenceEl.setAttribute("type", classificationConf.getType());
                             }
                             typeEl.appendChild(confidenceEl);
@@ -143,12 +255,8 @@ public class XMLExporter {
                         Confidence linkingConf = t.getLinkingConfidence();
                         if(linkingConf != null) {
                             Element confidenceEl = doc.createElement("confidence");
-//                            if(linkingConf.getValue() != null) {
-//                                System.out.println("conf val" + conf.getValue());
-                                confidenceEl.appendChild(doc.createTextNode(linkingConf.getValue()+""));
-//                            }
+                            confidenceEl.appendChild(doc.createTextNode(linkingConf.getValue()+""));
                             if(linkingConf.getType() != null) {
-//                                System.out.println("conf type" + conf.getType());
                                 confidenceEl.setAttribute("type", linkingConf.getType());
                             }
                             typeEl.appendChild(confidenceEl);
@@ -171,12 +279,10 @@ public class XMLExporter {
                             salienceEl.appendChild(classLabelEl);
                             
                             typeEl.appendChild(salienceEl);
-                            
                         }
 
                         // create element <provenance>
                         Element provenanceEl = doc.createElement("provenance");
-//                        System.out.println("prov: " + t.getProvenance());
                         provenanceEl.appendChild(doc.createTextNode(t.getProvenance()));
                         typeEl.appendChild(provenanceEl);
                         
@@ -201,7 +307,6 @@ public class XMLExporter {
             transformer.transform(source, result);
 
             xmlResult = sw.toString();
-//            System.out.println(xmlResult);
             return xmlResult;
         
         } catch (ParserConfigurationException ex) {
@@ -211,9 +316,7 @@ public class XMLExporter {
         } catch (TransformerException ex) {
             Logger.getLogger(XMLExporter.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
-//            return result;
         }
         return "problem";
-    }
-    
+    }    
 }

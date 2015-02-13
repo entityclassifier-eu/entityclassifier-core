@@ -1,15 +1,27 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core.vao;
 
 import java.util.ArrayList;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  *
@@ -21,7 +33,9 @@ public class Entity {
     private Long endOffset;
     private String underlyingString;
     private String entityType;
-    
+    private double linkingConfidence;
+    private String entityLink;
+            
     private ArrayList<Type> types;
     
     public Entity(){};
@@ -102,6 +116,34 @@ public class Entity {
      */
     public void setEntityType(String entityType) {
         this.entityType = entityType;
+    }
+
+    /**
+     * @return the linkingConfidence
+     */
+    public double getLinkingConfidence() {
+        return linkingConfidence;
+    }
+
+    /**
+     * @param linkingConfidence the linkingConfidence to set
+     */
+    public void setLinkingConfidence(double linkingConfidence) {
+        this.linkingConfidence = linkingConfidence;
+    }
+
+    /**
+     * @return the entityLink
+     */
+    public String getEntityLink() {
+        return entityLink;
+    }
+
+    /**
+     * @param entityLink the entityLink to set
+     */
+    public void setEntityLink(String entityLink) {
+        this.entityLink = entityLink;
     }
 
 }

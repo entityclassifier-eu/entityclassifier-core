@@ -1,6 +1,23 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core.ontologymapper;
 
@@ -31,7 +48,6 @@ public class DBpediaOntologyManager {
             InputStream in = FileManager.get().open( dbpediaOntologyLocation );
             model.read(in, null, "RDF/XML");
             manager = new DBpediaOntologyManager();
-//            System.out.println("dbpedia ontology loaded");
         }
         return manager;
     }
@@ -47,7 +63,6 @@ public class DBpediaOntologyManager {
         StmtIterator iter2;
         
         while(iter1.hasNext()) {
-            ////System.out.println(iter.next().getObject().toString());
             record.setUri(iter1.next().getObject().toString());
             iter2 = model.listStatements( new SimpleSelector(ResourceFactory.createResource(record.getUri()), ResourceFactory.createProperty("http://www.w3.org/2000/01/rdf-schema#label"),  (RDFNode)null));
             
@@ -60,20 +75,8 @@ public class DBpediaOntologyManager {
                     return record;
                     
                 }
-                
-//                if(tmpLang.equals("en") && lang.equals("en")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                } else if(tmpLang.equals("de") && lang.equals("de")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                } else if(tmpLang.equals("nl") && lang.equals("nl")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                }                    
             }
         }
-//        System.out.println("ending here");
         return null;        
     }
 }

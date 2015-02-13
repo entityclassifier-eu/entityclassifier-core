@@ -1,9 +1,24 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
-
 package cz.vse.fis.keg.entityclassifier.core.salience;
 
 import cz.vse.fis.keg.entityclassifier.core.THDController;
@@ -22,16 +37,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.lazy.IBk;
-import weka.classifiers.meta.FilteredClassifier;
+import weka.classifiers.trees.RandomForest;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.neighboursearch.LinearNNSearch;
-import weka.filters.unsupervised.attribute.Remove;
 
 /**
  *
@@ -42,8 +53,10 @@ public class EntitySaliencer {
     
     private static EntitySaliencer instance = null;
     private boolean initialized = false;
-//    IBk
-    private NaiveBayes classifier = null;
+    
+//    private NaiveBayes classifier = null;
+    private RandomForest classifier = null;
+    
     public static EntitySaliencer getInstance() {
         if(instance == null) {
             instance = new EntitySaliencer();
@@ -62,15 +75,12 @@ public class EntitySaliencer {
                 initialized = true;
             }
             
-//            System.out.println("Started computing salience ...");
-            
             ArrayList<SEntity> processedEntities = new ArrayList<SEntity>();
             
             for(Entity e : entities) {
                 SEntity entityMention = new SEntity();
                 entityMention.setBeginIndex(e.getStartOffset().intValue());
                 entityMention.setEntityType(e.getEntityType());
-//                System.out.println("Process entity mention ...");
                 
                 ArrayList<Type> types = e.getTypes();
                 ArrayList<String> loggedURIs = new ArrayList<String>();
@@ -81,7 +91,6 @@ public class EntitySaliencer {
 
                         if(!loggedURIs.contains(entityURI)) {
                             loggedURIs.add(entityURI);
-//                            System.out.println(entityURI);
                             entityMention.getUrls().add(entityURI);
                         }
                     }
@@ -94,23 +103,10 @@ public class EntitySaliencer {
                     ArrayList<String> entityURIs1 = sEntity.getUrls();
                     ArrayList<String> entityURIs2 = entityMention.getUrls();
                     
-//                    System.out.println("first");
-//                    for(String eURI1 : entityURIs1) {
-//                        System.out.println("uri: " + eURI1);
-//                    }
-//                    
-//                    System.out.println("second");
-//                    for(String eURI2 : entityURIs2) {
-//                        System.out.println("uri: " + eURI2);
-//                        
-//                    }
-                    
                     for(String eURI1 : entityURIs1) {
                         for(String eURI2 : entityURIs2) {
-//                            System.out.println("comparing: " + eURI1 + " and " + eURI2);                                
                             if(!entityAlreadyLogged) {
                                 if(eURI1.equals(eURI2)) {
-//                                    System.out.println("now");
                                     entityAlreadyLogged = true;
                                     isThisEntitySame = true;
                                     sEntity.setNumOccurrences(sEntity.getNumOccurrences()+1);
@@ -131,18 +127,9 @@ public class EntitySaliencer {
                 // Entity seen for first time in the document.
                 if(!entityAlreadyLogged) {
                     entityMention.setNumOccurrences(1);
-//                    System.out.println("adding entity");
                     processedEntities.add(entityMention);
                 }
             }
-            
-//            for(SEntity e : processedEntities) {
-//                System.out.println("###############");
-//                System.out.println(e.getNumOccurrences());
-//                for(String uri : e.getUrls()) {
-//                    System.out.println(uri);
-//                }
-//            }
             
             // Preparing the test data container.
             FastVector attributes = new FastVector(6);
@@ -155,7 +142,7 @@ public class EntitySaliencer {
             entityTypeNominalAttVal.addElement("named_entity");
             entityTypeNominalAttVal.addElement("common_entity");
             
-            Attribute entityTypeAtt = new Attribute("entityType", entityTypeNominalAttVal);
+            Attribute entityTypeAtt = new Attribute("type", entityTypeNominalAttVal);
             attributes.add(entityTypeAtt);
             FastVector classNominalAttVal = new FastVector(3);
             classNominalAttVal.addElement("not_salient");
@@ -169,14 +156,12 @@ public class EntitySaliencer {
                         
             for(int i = 0; i < processedEntities.size(); i++) {
                 
-//                System.out.println(processedEntities.get(i).getEntityType());
                 String entityType = "";
                 if(processedEntities.get(i).getEntityType().equals("named entity")) {
                     entityType = "named_entity";
                 } else if(processedEntities.get(i).getEntityType().equals("common entity")) {
                     entityType = "common_entity";                    
                 } else {
-                    System.out.println("PROBLEM");
                 }
                 Instance inst = new DenseInstance(6);
                 inst.setValue(evalData.attribute(0), processedEntities.get(i).getBeginIndex()); // begin index
@@ -194,13 +179,12 @@ public class EntitySaliencer {
                 String classLabel = evalData.firstInstance().classAttribute().value( classIndex);
                 double pred[] = classifier.distributionForInstance(evalData.get(i));
                 double probability = pred[classIndex];
-//                System.out.println(classLabel + " : " + probability);
-//                System.out.println(pred[0]+":"+pred[1]+":"+pred[2]);
                 
                 double salienceScore = pred[1] * 0.5 + pred[2];
-//                sEntity.setSalienceScore(salienceScore);
-//                sEntity.setSalienceConfidence(probability);
-//                sEntity.setSalienceClass(classLabel);
+                sEntity.setSalienceScore(salienceScore);
+                sEntity.setSalienceConfidence(probability);
+                sEntity.setSalienceClass(classLabel);
+                
                 
                 for(Entity e : entities) {
                     ArrayList<Type> types = e.getTypes();
@@ -209,9 +193,9 @@ public class EntitySaliencer {
                             if(sEntity.getUrls().contains(t.getEntityURI())){
                                 Salience s = new Salience();
                                 s.setClassLabel(classLabel);
-                                DecimalFormat df=new DecimalFormat("0.000");
-                                double fProbability = (Double)df.parse(df.format(probability));
-                                double fSalience = (Double)df.parse(df.format(salienceScore));
+                                DecimalFormat df = new DecimalFormat("0.000");
+                                double fProbability = df.parse(df.format(probability)).doubleValue();
+                                double fSalience = df.parse(df.format(salienceScore)).doubleValue();
                                 s.setConfidence(fProbability);
                                 s.setScore(fSalience);
                                 t.setSalience(s);
@@ -221,13 +205,9 @@ public class EntitySaliencer {
                 }
             }
             
-//            System.out.println("Finished computing salience ...");            
-//            System.out.println("END");
-            
         } catch (Exception ex) {
             Logger.getLogger(EntitySaliencer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
+        }        
     }
 
     private void trainModel() {
@@ -243,7 +223,8 @@ public class EntitySaliencer {
             Instances data = new Instances(reader);            
             data.setClassIndex(data.numAttributes() - 1);
             
-            classifier = new NaiveBayes();
+//            classifier = new NaiveBayes();
+            classifier = new RandomForest();
             
             // Train the classifer.
             classifier.buildClassifier(data);

@@ -1,6 +1,23 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core.ontologymapper;
 
@@ -14,7 +31,6 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.SimpleSelector;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
-import com.hp.hpl.jena.util.FileManager;
 import com.hp.hpl.jena.vocabulary.RDFS;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
@@ -24,14 +40,10 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import cz.vse.fis.keg.entityclassifier.core.vao.Hypernym;
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,8 +70,6 @@ public class YagoOntologyManager {
                 db = mongoClient.getDB( "thddb" );
                 
                 model = ModelFactory.createDefaultModel();
-//                InputStream in = FileManager.get().open( yagoOntologyLocation );
-//                model.read(in, null, "TTL");
                 BufferedReader br = null;
             
                 br = new BufferedReader(new FileReader(yagoOntologyLocation));
@@ -77,12 +87,8 @@ public class YagoOntologyManager {
                         } else {
                             model.add(ResourceFactory.createResource("http://yago-knowledge.org/resource/"+stm[1].substring(1, stm[1].length()-1)), RDFS.subClassOf, ResourceFactory.createResource("http://yago-knowledge.org/resource/"+stm[3]));                        
                         }
-                        ////System.out.println(stm[1]);
-                        ////System.out.println(stm[3]);
-                    
                     }
                 }
-                //System.out.println("Finished loading YAGO taxonomy");
                 
                 manager = new YagoOntologyManager();
             } catch (FileNotFoundException ex) {
@@ -104,7 +110,6 @@ public class YagoOntologyManager {
         while(cursor.hasNext()){
         
             DBObject resObj = cursor.next();
-            ////System.out.println(resObj);
             
             BasicDBList types = (BasicDBList) resObj.get("types");
             
@@ -120,6 +125,7 @@ public class YagoOntologyManager {
                     hyp1.setTypeURL(type.get("uri").toString());
                     hyp1.setType(type.get("label").toString());
                     hyp1.setOrigin(origin);
+                    hyp1.setAccuracy("-1.0");
                     hypernymsList.add(hyp1);
 
                     mainModel.union(getHierarchyModel(type.get("uri").toString()));
@@ -139,7 +145,8 @@ public class YagoOntologyManager {
             hyp.setEntity(entityTitle);
             hyp.setTypeURL(stm.getObject().toString());
             hyp.setOrigin(origin);
-                        
+            hyp.setAccuracy("-1.0");
+            
             String typeLabel = getYagoTypeLabel(stm.getObject().toString());
             
             if(typeLabel != null){
@@ -174,7 +181,6 @@ public class YagoOntologyManager {
     public Model getHierarchyModel(String uri){
         
         // returns all subclasses for given URI
-        
         Model m = ModelFactory.createDefaultModel();
         OntoRecord initRecord = new OntoRecord();
         initRecord.setUri(uri);
@@ -196,20 +202,15 @@ public class YagoOntologyManager {
         
         DBCursor cursor = db.getCollection("entities_yago").find(new BasicDBObject().append("uri", "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_")));
         
-        //System.out.println(cursor.size());
-        
-        while(cursor.hasNext()){
+        while(cursor.hasNext()) {
             
             DBObject resObj = cursor.next();
-            ////System.out.println(resObj);
             
             BasicDBList types = (BasicDBList) resObj.get("types");
             
             if(types != null){
-                //System.out.println(types.size());
                 for(int i=0; i<types.size(); i++){
                     DBObject type = (DBObject) types.get(i);
-                    //System.out.println(type.get("uri").toString());
                     Hypernym h = new Hypernym();
                     h.setEntity(entityTitle);
                     h.setEntityURL(resObj.get("uri").toString());
@@ -226,15 +227,12 @@ public class YagoOntologyManager {
                             
                             if(initRecord != null){
                                 
-                                //System.out.println("YES: " + initRecord.getUri());
                                 Hypernym hypernymDerived = new Hypernym();
                                 hypernymDerived.setEntity(entityTitle);
                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
                                 hypernymDerived.setType(initRecord.getLabel());
                                 hypernymDerived.setTypeURL(initRecord.getUri());
                                 hypernymDerived.setOrigin("thd-derived");
-                                //hypernymsList.add(hypernymDerived);
-                                
                             }
                     }                    
                 }
@@ -245,14 +243,12 @@ public class YagoOntologyManager {
         
     public static void setYagoOntologyFileLocation(String loc){
         yagoOntologyLocation = loc;
-        //System.out.println("Setting Yago file location " + loc);
     }
     
     public void test3(){
         
         StmtIterator iter = model.listStatements( new SimpleSelector(ResourceFactory.createResource("http://yago-knowledge.org/resource/wikicategory_Category:Music_competitions"), (Property) RDFS.subClassOf,  (RDFNode)null));
         while (iter.hasNext()) {
-            //System.out.println(iter.next().getObject().toString());
         }            
         
     }
@@ -261,7 +257,6 @@ public class YagoOntologyManager {
     
         StmtIterator iter = model.listStatements( new SimpleSelector(ResourceFactory.createResource("http://dbpedia.org/ontology/Stadium"), null,  (RDFNode)null));
         while (iter.hasNext()) {
-            //System.out.println(iter.next().getObject().toString());
         }    
     }
     
@@ -271,39 +266,18 @@ public class YagoOntologyManager {
         OntoRecord record = new OntoRecord();
         
         while(iter1.hasNext()) {
-            ////System.out.println(iter.next().getObject().toString());
             record.setUri(iter1.next().getObject().toString());
             record.setLabel("Test label");
             return record;
-//            while(iter2.hasNext()){
-//                Literal res = (Literal) iter2.next().getObject();                
-//                String tmpLang = res.getLanguage();
-//                
-//                if(tmpLang.equals("en") && lang.equals("en")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                } else if(tmpLang.equals("de") && lang.equals("de")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                } else if(tmpLang.equals("nl") && lang.equals("nl")){
-//                    record.setLabel(res.getString());
-//                    return record;
-//                }                    
-//            }
         }
-        
-        // return record;
         return null;
-        
     }
     
     public static void test2(){
     
         StmtIterator iter1 = model.listStatements( new SimpleSelector(ResourceFactory.createResource("http://dbpedia.org/ontology/RouteOfTransportation"), ResourceFactory.createProperty("http://www.w3.org/2000/01/rdf-schema#label"),  (RDFNode)null));
-
         Literal res = (Literal)iter1.next().getObject();
         if(res.getLanguage().equals("de")){
-            //System.out.println("RES: " + res.getString());
         }
     }
 }

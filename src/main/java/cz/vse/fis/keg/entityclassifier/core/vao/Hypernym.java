@@ -1,11 +1,25 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core.vao;
-
-import java.util.Objects;
-import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  *
@@ -171,79 +185,11 @@ public class Hypernym {
         this.bounds = bounds;
     }
     
-//    public int compareTo(Object o) {
-//        Hypernym o2 = null;
-////        
-//        if(o instanceof Hypernym) {
-//            o2 = (Hypernym) o;
-//        }
-//        
-//        if(
-//                this.entity.equals(o2.entity) && 
-//                this.entityURL.equals(o2.entityURL) &&
-//                this.type.equals(o2.type) &&
-//                this.typeURL.equals(o2.typeURL)
-//                ) {
-//            return 0;
-//        } else {
-//            return -1;
-//        }
-//            
-//   }
-
-//    @Override
-//    public int compareTo(Hypernym o) {
-//        
-////        System.out.println("== checking");
-////        
-////        System.out.println(o.getEntity());
-////        System.out.println(o.getEntityURL());
-////        System.out.println(o.getType());
-////        System.out.println(o.getTypeURL());
-////        
-////        System.out.println("---");
-////        
-////        System.out.println(this.getEntity());
-////        System.out.println(this.getEntityURL());
-////        System.out.println(this.getType());
-////        System.out.println(this.getTypeURL());
-//        
-//        if(this.entity.equals(o.getEntity()) &&
-//        this.entityURL.equals(o.getEntityURL()) &&
-//        this.type.equals(o.getType()) &&
-//        this.typeURL.equals(o.getTypeURL())) {
-//            System.out.println("SAME");
-//            return 0;
-//        } else {
-//            return -1;
-//        }
-//    }
-    
-//    @Override
-//    public boolean equals(Object o)
-//    {
-//        if(o != null && (o instanceof Hypernym)) {
-//            Hypernym o2 = (Hypernym)o;
-//        if(this.entity.equals(o2.entity))
-//            return -1;
-//        if(this.entityURL.equals(o.entityURL))
-//            return -1;
-//        if(this.type.equals(o.type))
-//            return -1;
-//        if(this.typeURL.equals(o.typeURL))
-//            return -1;
-//
-//        }
-//        return false;
-//    }
     @Override 
     public int hashCode()
     {
-//        System.out.println("hash");
         return
-//                entity.hashCode() +
                 this.getEntityURL().hashCode() +
-//                type.hashCode() +
                 this.getTypeURL().hashCode() + 
                 this.getOrigin().hashCode();
     }
@@ -253,9 +199,7 @@ public class Hypernym {
 
         Hypernym obj = (Hypernym)objc;
         if (
-//                obj.getType().equals(this.getType()) &&
                 obj.getTypeURL().equals(this.getTypeURL()) &&
-//                obj.getEntity().equals(this.getEntity()) &&
                 obj.getEntityURL().equals(this.getEntityURL()) &&
                 obj.getOrigin().equals(this.getOrigin())
                 ) {
@@ -264,4 +208,5 @@ public class Hypernym {
             return false;
         }
     }
+
 }

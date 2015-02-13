@@ -1,14 +1,29 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core;
 
 import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
-
 import cz.vse.fis.keg.entityclassifier.core.conf.PropertiesLoader;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyManager;
-import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyMapper;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.TypeMapper;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.YagoOntologyManager;
 import gate.CreoleRegister;
@@ -55,14 +70,14 @@ public class THDController {
     private void initPool() {
         pool = new LinkedBlockingQueue<THDWorker>();
         for(int i = 0; i < Settings.POOL_SIZE; i++) {
-            Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned thread #" + pool.size());
             pool.add(new THDWorker());
+            Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned Entityclassifier.eu instance #" + pool.size());
         }
-        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned " + Settings.POOL_SIZE + " threads.");
+        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned " + Settings.POOL_SIZE + " Entityclassifier.eu instance.");
     }
 
     private void loadSettings() {
-        System.out.println("loading properties...");
+        System.out.println("Loading configuration file ...");
         Properties prop = new PropertiesLoader().getProperties();
         readSettings(prop);        
     }
@@ -107,22 +122,23 @@ public class THDController {
         
         Settings.SALIENCE_DATASET = prop.getProperty("salience_dataset");
         
+        Settings.EN_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("en_dbpedia_disambiguation_dataset");
+        Settings.DE_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("de_dbpedia_disambiguation_dataset");
+        Settings.NL_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("nl_dbpedia_disambiguation_dataset");
+        
+        Settings.SEMITAGS_SPOTTING_ENDPOINT = prop.getProperty("semitags_spotting_endpoint");
+        Settings.SEMITAGS_LINKING_ENDPOINT = prop.getProperty("semitags_linking_endpoint");
+        
         DBpediaOntologyManager.setDbpediaOntologyFileLocation(prop.getProperty("dbpediaOntologyFileLocation"));
         YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
-                
-//        DBpediaOntologyMapper.setEnMappingsLocation(prop.getProperty("en_inferred_mappings"));
-//        DBpediaOntologyMapper.setDeMappingsLocation(prop.getProperty("de_inferred_mappings"));
-//        DBpediaOntologyMapper.setNlMappingsLocation(prop.getProperty("nl_inferred_mappings"));
-        
-        
+
         TypeMapper.setEn_inferred_mappings(prop.getProperty("en_inferred_mappings"));
         TypeMapper.setDe_inferred_mappings(prop.getProperty("de_inferred_mappings"));
         TypeMapper.setNl_inferred_mappings(prop.getProperty("nl_inferred_mappings"));
-        
+
         TypeMapper.getInstance().init();
-        
-        
-        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Settings loaded.");            
+
+        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Configuration file successfully loaded.");            
     }
 
     private void initGATE() throws MalformedURLException, GateException {
@@ -140,7 +156,7 @@ public class THDController {
         CreoleRegister register = Gate.getCreoleRegister();
         register.registerDirectories(annieHome);
         register.registerDirectories(taggerHome);
-        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "GATE was initialized successfully.");            
+        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Entityclassifier.eu was initialized successfully.");            
     }
 
     void returnWorker(THDWorker worker) {

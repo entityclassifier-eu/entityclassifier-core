@@ -1,8 +1,26 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core;
+
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
@@ -27,7 +45,6 @@ import gate.FeatureMap;
 import gate.Node;
 import gate.Corpus;
 import gate.ProcessingResource;
-//import gate.creole.SerialAnalyserController;
 import gate.creole.ResourceInstantiationException;
 import gate.creole.SerialController;
 import gate.creole.SerialAnalyserController;
@@ -53,13 +70,7 @@ import java.util.logging.Logger;
 public class THDInstance {
     
     private static String gateHome = null;
-    private static String docAcquisitionPlugin = null;
     private static String pluginHome; 
-    
-    private String usedWikiCreoleName;// = "wikifetch.WikipediaPR";
-    private String usedQueryHighlightCreoleName;
-    private static final String QueryHighlightPRname = "QueryHighlightPR";
-    private String JapeGrammarPath;
     
     private static String enEntityExtractionGrammar;
     private static String nlEntityExtractionGrammar;
@@ -72,7 +83,6 @@ public class THDInstance {
     private static String nlTaggerBinary;
     private static String deTaggerBinary;
    
-    private ProcessingResource JapePR;
     private SerialAnalyserController corpusAnnotationPipeline = null;
     private SerialController corpusAcquisitionPipeline = null;
     
@@ -94,7 +104,6 @@ public class THDInstance {
             init();
             initGate();
             assamblePipelines();
-                     
         }
         return thdInstance;
     }
@@ -129,12 +138,9 @@ public class THDInstance {
                             thdHypernyms = extractEntityHypernymsEN(entity, kb);
                         }
                         
-                    } else if(prov.equals("dbpedia")){
-                        System.out.println("fetching dbpedia");
+                    } else if(prov.equals("dbpedia")) {
                         dbpediaHypernyms = getDBpediaHypernyms(entity, lang);
-                        System.out.println(dbpediaHypernyms.size());
                     } else if(prov.equals("yago")){
-                        System.out.println("fetching yago");
                         yagoHypernyms = getYAGOHypernyms(entity, lang);
                     }            
                 }
@@ -152,15 +158,11 @@ public class THDInstance {
                 return hypernymsList;
             case "de":
                 for(String prov : provenance){
-                    if(prov.equals("thd")){
-                        System.out.println("fetching thd");
+                    if(prov.equals("thd")) {
                         thdHypernyms = extractEntityHypernymsDE(entity, kb);
-                    } else if(prov.equals("dbpedia")){
-                        System.out.println("fetching dbpedia");
+                    } else if(prov.equals("dbpedia")) {
                         dbpediaHypernyms = getDBpediaHypernyms(entity, lang);
-                        System.out.println(dbpediaHypernyms.size());
                     } else if(prov.equals("yago")){
-                        System.out.println("fetching yago");
                         yagoHypernyms = getYAGOHypernyms(entity, lang);
                     }            
                 }
@@ -178,15 +180,11 @@ public class THDInstance {
                 return hypernymsList;
             case "nl":                
                 for(String prov : provenance){
-                    if(prov.equals("thd")){
-                        System.out.println("fetching thd");
+                    if(prov.equals("thd")) {
                         thdHypernyms = extractEntityHypernymsNL(entity, kb);
                     } else if(prov.equals("dbpedia")){
-                        System.out.println("fetching dbpedia");
                         dbpediaHypernyms = getDBpediaHypernyms(entity, lang);
-                        System.out.println(dbpediaHypernyms.size());
                     } else if(prov.equals("yago")){
-                        System.out.println("fetching yago");
                         yagoHypernyms = getYAGOHypernyms(entity, lang);
                     }            
                 }
@@ -211,7 +209,6 @@ public class THDInstance {
         
         ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
         queryObj = new BasicDBObject();
-        //System.out.println("Searching hypernym for entity: " + entityTitle);
         queryObj.append("label", entityTitle);
         queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "dbpedia")));
         DBObject resObj;
@@ -234,10 +231,8 @@ public class THDInstance {
                         hypernym.setType(obj.get("label").toString());
                         hypernym.setTypeURL(obj.get("uri").toString());
                         hypernym.setOrigin("dbpedia");
-                        //System.out.println("TEST: " + obj.get("uri").toString());
                         if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                             hypernymsList.add(hypernym);
-                            //System.out.println("DBpedia ontology");
                         }
                     }
                 }
@@ -259,10 +254,8 @@ public class THDInstance {
                         hypernym.setType(obj.get("label").toString());
                         hypernym.setTypeURL(obj.get("uri").toString());
                         hypernym.setOrigin("dbpedia");
-                        //System.out.println("TEST: " + obj.get("uri").toString());
                         if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                             hypernymsList.add(hypernym);
-                            //System.out.println("DBpedia ontology");
                         }
                     }
                 }
@@ -285,11 +278,9 @@ public class THDInstance {
                         hypernym.setType(obj.get("label").toString());
                         hypernym.setTypeURL(obj.get("uri").toString());
                         hypernym.setOrigin("dbpedia");
-                        //System.out.println("TEST: " + obj.get("uri").toString());
                         
                         if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                             hypernymsList.add(hypernym);
-                            //System.out.println("DBpedia ontology");
                         }
                     }
                 }
@@ -297,7 +288,6 @@ public class THDInstance {
                 return hypernymsList;
                 
             default:
-                //System.out.println("Not supported language!");
                 return hypernymsList;
         }
     }
@@ -309,40 +299,28 @@ public class THDInstance {
         switch(lang){
 
             case "en":
-
                 queryObj = new BasicDBObject();
                 queryObj.append("labels.label", entityTitle).append("labels.lang", "en");
-                
                 resObj = MongoDBClient.getDBInstance().getCollection("entities_yago").findOne(queryObj);
-                
+
                 if(resObj != null) {
-                    
-                    //System.out.println("before " + hypernymsList.size());
                     hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "yago"));
-                    //System.out.println("after " + hypernymsList.size());
                 }
                 
                 break;
                 
             case "de":
-                
                 queryObj = new BasicDBObject();
                 queryObj.append("labels.label", entityTitle).append("labels.lang", "de");
-//                queryObj.append("uri", "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"));
-                
                 resObj = MongoDBClient.getDBInstance().getCollection("entities_yago").findOne(queryObj);
                 
-                if(resObj != null){
-                    
-                    //System.out.println("before " + hypernymsList.size());
+                if(resObj != null) {
                     hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, resObj.get("uri").toString(), "de", "yago"));
-                    //System.out.println("after " + hypernymsList.size());
                 }
                 
                 break;
                 
             case "nl":
-                
                 break;
         }
         return hypernymsList;
@@ -362,16 +340,6 @@ public class THDInstance {
         for(String prov : provs){
             if(prov.equals("thd") && thd_check != true){
                 thdHypernyms = getTHDHypernymsLHD(entityTitle, lang);
-                
-//                if(thdHypernyms == null) {
-//                    if(!lang.equals("en")){
-//                        System.out.println("Trying to find in english");
-//                        thdHypernyms = getTHDHypernyms(entityTitle, "en");                    
-//                    }
-//                } else if((thdHypernyms.size() == 0) && (!lang.equals("en"))){
-//                        System.out.println("Trying to find in english");
-//                        thdHypernyms = getTHDHypernyms(entityTitle, "en");                                    
-//                }
                 thd_check = true;
             } else if(prov.equals("dbpedia") && dbpedia_check != true){
                 dbpediaHypernyms = getDBpediaHypernyms(entityTitle, lang);
@@ -385,17 +353,14 @@ public class THDInstance {
         
         if(dbpediaHypernyms != null){
             hypernymsList.addAll(dbpediaHypernyms);
-            //System.out.println("DBpedia found: " + dbpediaHypernyms.size());
         }
         
         if(yagoHypernyms != null){
             hypernymsList.addAll(yagoHypernyms);
-            //System.out.println("YAGO found: " + yagoHypernyms.size());
         }
         
         if(thdHypernyms != null) {
             hypernymsList.addAll(thdHypernyms);
-            //System.out.println("THD found: " + thdHypernyms.size());
         }
         
         return hypernymsList;
@@ -405,7 +370,6 @@ public class THDInstance {
         
         ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
         BasicDBObject queryObj = new BasicDBObject();
-        //System.out.println("Searching hypernym for entity: " + entityTitle);
         queryObj.append("label", entityTitle);
         queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
         
@@ -413,20 +377,11 @@ public class THDInstance {
             case "en":
                 
                 DBObject resObj = MongoDBClient.getDBInstance().getCollection("en_entities_thd").findOne(queryObj);                
-                        //System.out.println(resObj);ß
                 
                 if(resObj != null){
                     
-                    // deriving YAGO types
-                    //System.out.println("before " + hypernymsList.size());
-                    //hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
-                    //System.out.println("after " + hypernymsList.size());
-                    
-                    //System.out.println(resObj);
                     BasicDBList e = (BasicDBList)resObj.get("types");
                     DBObject type = (DBObject)e.get(0);
-                    //System.out.println("HYPENYM: " + type.get("label"));
-
                     Hypernym hypernym = new Hypernym();
                     hypernym.setEntity(entityTitle);
                     hypernym.setEntityURL(resObj.get("uri").toString());
@@ -444,8 +399,6 @@ public class THDInstance {
                     // creating hierarchy from the dbpedia ontology
                     if(firstType.get("mapping").equals("dbOnto")){
                         
-                        //System.out.println("dbOnto");
-
                         OntoRecord initRecord = new OntoRecord();
                         initRecord.setUri(firstType.get("uri").toString());
                         
@@ -455,7 +408,6 @@ public class THDInstance {
                             
                             if(initRecord != null){
                                 
-                                //System.out.println("YES: " + initRecord.getUri());
                                 Hypernym hypernymDerived = new Hypernym();
                                 hypernymDerived.setEntity(entityTitle);
                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -473,9 +425,7 @@ public class THDInstance {
                     // if found, for the superclass is created hierarchy
                     else if(firstType.get("mapping").equals("dbRes")){
                         
-//                        System.out.println("dbRes");
                         String initialUri = firstType.get("uri").toString();
-//                        System.out.println("dbRes" + initialUri);
                         
                         boolean continueSearching = true;
                         
@@ -489,21 +439,17 @@ public class THDInstance {
                                 initialUri = getSuperclass(initialUri, "en");
                                 
                                 if(initialUri == null){
-                                    //System.out.println("No superclass found, finishing searching");
                                     continueSearching = false;
                                     
                                 } else {
-                                    //System.out.println("Superclass found");
+                                    
                                     // superClass uri found
                                     // check if uri is dbOnto - create hierarchy
-                                    // check if uri is dbRes - continue
-                                    
+                                    // check if uri is dbRes - continue                                    
                                     if(initialUri.contains("/resource/")){
-                                        //System.out.println("Found superclass is dbres");
                                         // do nothing
                                         // continue to search
                                     } else if(initialUri.contains("/ontology/")) {
-                                        //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
                                         // create hierarchy
                                         continueSearching = false;
                                         
@@ -516,7 +462,6 @@ public class THDInstance {
 
                                             if(initRecord != null){
 
-                                                //System.out.println("YES: " + initRecord.getUri());
                                                 Hypernym hypernymDerived = new Hypernym();
                                                 hypernymDerived.setEntity(entityTitle);
                                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -526,12 +471,9 @@ public class THDInstance {
                                                 hypernymDerived.setAccuracy(type.get("accuracy").toString());
                                                 hypernymDerived.setBounds(type.get("bounds").toString());
                                                 hypernymsList.add(hypernymDerived);
-
                                             }
                                         }
                                     } else {
-                                        // some other uri
-                                        //System.out.println("Problem 1234");
                                         continueSearching = false;
                                     }
                                 }
@@ -547,9 +489,7 @@ public class THDInstance {
 
                                     initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
 
-                                    if(initRecord != null){
-
-                                        //System.out.println("YES: " + initRecord.getUri());
+                                    if(initRecord != null) {
                                         Hypernym hypernymDerived = new Hypernym();
                                         hypernymDerived.setEntity(entityTitle);
                                         hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -566,25 +506,16 @@ public class THDInstance {
                     return hypernymsList;
                     
                 } else {
-                    //System.out.println("hypernym not found for " + entityTitle);
                     return null;
                 }
             case "de":
                 
                 resObj = MongoDBClient.getDBInstance().getCollection("de_entities_thd").findOne(queryObj);                
-                        //System.out.println(resObj);
                 
-                if(resObj != null){
-                    
-                    //System.out.println("before " + hypernymsList.size());
+                if(resObj != null) {
                     hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "de", "thd-derived"));
-                    //System.out.println("after " + hypernymsList.size());
-
-                    //System.out.println(resObj);
                     BasicDBList e = (BasicDBList)resObj.get("types");
                     DBObject type = (DBObject)e.get(0);
-                    //System.out.println("HYPENYM: " + type.get("label"));
-
                     Hypernym hypernym = new Hypernym();
                     hypernym.setEntity(entityTitle);
                     hypernym.setEntityURL(resObj.get("uri").toString());
@@ -600,8 +531,6 @@ public class THDInstance {
                     // creating hierarchy from the dbpedia ontology
                     if(firstType.get("mapping").equals("dbOnto")){
                         
-                        //System.out.println("dbOnto");
-
                         OntoRecord initRecord = new OntoRecord();
                         initRecord.setUri(firstType.get("uri").toString());
                         
@@ -611,7 +540,6 @@ public class THDInstance {
                             
                             if(initRecord != null){
                                 
-                                //System.out.println("YES: " + initRecord.getUri());
                                 Hypernym hypernymDerived = new Hypernym();
                                 hypernymDerived.setEntity(entityTitle);
                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -627,12 +555,12 @@ public class THDInstance {
                     // if found, for the superclass is created hierarchy
                     else if(firstType.get("mapping").equals("dbRes")){
                         
-                        //System.out.println("dbRes");
                         String initialUri = firstType.get("uri").toString();
                         
                         boolean continueSearching = true;
                         
-                        while(continueSearching){
+                        while(continueSearching) {
+                            
                             // try to find dbonto for dbres
                             DBpediaMapping mapping = getSubclassConfirmed(initialUri);
                             
@@ -642,21 +570,16 @@ public class THDInstance {
                                 initialUri = getSuperclass(initialUri, "de");
                                 
                                 if(initialUri == null){
-                                    //System.out.println("No superclass found, finishing searching");
                                     continueSearching = false;
                                     
                                 } else {
-                                    //System.out.println("Superclass found");
                                     // superClass uri found
                                     // check if uri is dbOnto - create hierarchy
                                     // check if uri is dbRes - continue
-                                    
                                     if(initialUri.contains("/resource/")){
-                                        //System.out.println("Found superclass is dbres");
                                         // do nothing
                                         // continue to search
                                     } else if(initialUri.contains("/ontology/")) {
-                                        //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
                                         // create hierarchy
                                         continueSearching = false;
                                         
@@ -666,10 +589,8 @@ public class THDInstance {
                                         while(initRecord != null){
 
                                             initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
                                             if(initRecord != null){
 
-                                                //System.out.println("YES: " + initRecord.getUri());
                                                 Hypernym hypernymDerived = new Hypernym();
                                                 hypernymDerived.setEntity(entityTitle);
                                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -677,12 +598,10 @@ public class THDInstance {
                                                 hypernymDerived.setTypeURL(initRecord.getUri());
                                                 hypernymDerived.setOrigin("thd-derived");
                                                 hypernymsList.add(hypernymDerived);
-
                                             }
                                         }
                                     } else {
                                         // some other uri
-                                        //System.out.println("Problem 1234");
                                         continueSearching = false;
                                     }
                                 }
@@ -700,7 +619,6 @@ public class THDInstance {
 
                                     if(initRecord != null){
 
-                                        //System.out.println("YES: " + initRecord.getUri());
                                         Hypernym hypernymDerived = new Hypernym();
                                         hypernymDerived.setEntity(entityTitle);
                                         hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -708,35 +626,25 @@ public class THDInstance {
                                         hypernymDerived.setTypeURL(initRecord.getUri());
                                         hypernymDerived.setOrigin("thd-derived");
                                         hypernymsList.add(hypernymDerived);
-
                                     }
                                 }
                             }
                         }
                     }
-                    
                     return hypernymsList;
                     
                 } else {
-                    //System.out.println("hypernym not found for " + entityTitle);
                     return hypernymsList;
                 }
                 
             case "nl":
                 
                 resObj = MongoDBClient.getDBInstance().getCollection("nl_entities_thd").findOne(queryObj);                
-                        //System.out.println(resObj);
 
                 if(resObj != null){
-                    
-                    //System.out.println("before " + hypernymsList.size());
                     hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
-                    //System.out.println("after " + hypernymsList.size());
-
-                    //System.out.println(resObj);
                     BasicDBList e = (BasicDBList)resObj.get("types");
                     DBObject type = (DBObject)e.get(0);
-                    //System.out.println("HYPENYM: " + type.get("label"));
 
                     Hypernym hypernym = new Hypernym();
                     hypernym.setEntity(entityTitle);
@@ -753,8 +661,6 @@ public class THDInstance {
                     // creating hierarchy from the dbpedia ontology
                     if(firstType.get("mapping").equals("dbOnto")){
                         
-                        //System.out.println("dbOnto");
-
                         OntoRecord initRecord = new OntoRecord();
                         initRecord.setUri(firstType.get("uri").toString());
                         
@@ -764,7 +670,6 @@ public class THDInstance {
                             
                             if(initRecord != null){
                                 
-                                //System.out.println("YES: " + initRecord.getUri());
                                 Hypernym hypernymDerived = new Hypernym();
                                 hypernymDerived.setEntity(entityTitle);
                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -780,7 +685,6 @@ public class THDInstance {
                     // if found, for the superclass is created hierarchy
                     else if(firstType.get("mapping").equals("dbRes")){
                         
-                        //System.out.println("dbRes");
                         String initialUri = firstType.get("uri").toString();
                         
                         boolean continueSearching = true;
@@ -795,22 +699,16 @@ public class THDInstance {
                                 initialUri = getSuperclass(initialUri, "nl");
                                 
                                 if(initialUri == null){
-                                    //System.out.println("No superclass found, finishing searching");
-                                    continueSearching = false;
-                                    
+                                    continueSearching = false;                                    
                                 } else {
                                     
-                                    //System.out.println("Superclass found");
                                     // superClass uri found
                                     // check if uri is dbOnto - create hierarchy
-                                    // check if uri is dbRes - continue
-                                    
+                                    // check if uri is dbRes - continue                                    
                                     if(initialUri.contains("/resource/")){
-                                        //System.out.println("Found superclass is dbres");
                                         // do nothing
                                         // continue to search
                                     } else if(initialUri.contains("/ontology/")) {
-                                        //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
                                         // create hierarchy
                                         continueSearching = false;
                                         
@@ -823,7 +721,6 @@ public class THDInstance {
 
                                             if(initRecord != null){
 
-                                                //System.out.println("YES: " + initRecord.getUri());
                                                 Hypernym hypernymDerived = new Hypernym();
                                                 hypernymDerived.setEntity(entityTitle);
                                                 hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -851,9 +748,8 @@ public class THDInstance {
 
                                     initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
 
-                                    if(initRecord != null){
+                                    if(initRecord != null) {
                                         
-                                        //System.out.println("YES: " + initRecord.getUri());
                                         Hypernym hypernymDerived = new Hypernym();
                                         hypernymDerived.setEntity(entityTitle);
                                         hypernymDerived.setEntityURL(resObj.get("uri").toString());
@@ -870,11 +766,9 @@ public class THDInstance {
                     return hypernymsList;
                     
                 } else {
-                    //System.out.println("hypernym not found for " + entityTitle);
                     return hypernymsList;
                 }
             default:
-                //System.out.println("Not supported language!");
                 return null;
         }
     }
@@ -886,15 +780,12 @@ public class THDInstance {
         DBObject resObj2 = MongoDBClient.getDBInstance().getCollection("test_en_entities_superclass").findOne(queryObj2);
         
         if(resObj2 != null){
-            //System.out.println(resObj);
             BasicDBList e = (BasicDBList)resObj.get("types");
             DBObject type = (DBObject)e.get(0);
-            //System.out.println("Superclass for "+ res + " is " + type.get("label"));
             
             DBpediaMapping result = new DBpediaMapping();
             result.setLabel(type.get("label").toString());
             result.setUri(type.get("uri").toString());
-            
             return result;
         } else {
             return null;
@@ -903,7 +794,6 @@ public class THDInstance {
     
     public String getSuperclass(String uri, String lang) throws UnknownHostException{
         
-        //System.out.println("Searching superclass for " + uri);
         BasicDBObject tempQueryObj = new BasicDBObject();
         tempQueryObj.append("uri", uri);
         tempQueryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
@@ -922,8 +812,7 @@ public class THDInstance {
             return tmpTypeObj.get("uri").toString();
         } else {
             return null;
-        }
-        
+        }        
     }
     
     public ArrayList<Hypernym> extractEntityHypernymsEN(String entity, String kb) {
@@ -937,7 +826,6 @@ public class THDInstance {
             }else if(kb.equals("live")){
                 path = Settings.EN_WIKIPEDIA_LIVE_EXPORT + entity.replace(" ", "_");            
             }
-            System.out.println(path);
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
             URLConnection connection = url.openConnection();
@@ -951,13 +839,11 @@ public class THDInstance {
             }
             in.close();
             Article article = new Article(buffer.toString(),"en");
-            //System.out.println(article.getFirstSection());
             Document document = Factory.newDocument(article.getFirstSection());
             Corpus corpus = Factory.newCorpus("");
             corpus.add(document);
             hypernymExtractionPipelineEN.setCorpus(corpus);
             hypernymExtractionPipelineEN.execute();
-            //System.out.println("FINITOOOOOO");
             
             Iterator corpus_iter = corpus.iterator();
             
@@ -966,14 +852,12 @@ public class THDInstance {
                 AnnotationSet as_all = doc.getAnnotations();
                 AnnotationSet as_hearst = as_all.get("h");
                 Iterator ann_iter = as_hearst.iterator();
-                //System.out.println(as_hearst.size());
                 
                 while (ann_iter.hasNext()) {
                     Annotation isaAnnot = (gate.Annotation) ann_iter.next();
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-                    //System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -984,7 +868,6 @@ public class THDInstance {
                     hypObj.setAccuracy("0.85");
                     hypObj.setBounds("+- 2.5%");
                     hypernymsList.add(hypObj);
-//                    return hypObj;
                 }
             }
             
@@ -1011,7 +894,6 @@ public class THDInstance {
             }else if(kb.equals("live")){
                 path = Settings.DE_WIKIPEDIA_LIVE_EXPORT+entity.replace(" ", "_");            
             }
-            System.out.println(path);
 
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
@@ -1027,7 +909,6 @@ public class THDInstance {
             
             in.close();
             Article article = new Article(buffer.toString(),"en");
-            //System.out.println(article.getFirstSection());
             Document document = Factory.newDocument(article.getFirstSection());
             Corpus corpus = Factory.newCorpus("");
             corpus.add(document);
@@ -1035,8 +916,6 @@ public class THDInstance {
             hypernymExtractionPipelineDE.setCorpus(corpus);
             hypernymExtractionPipelineDE.execute();
 
-            //System.out.println("FINITOOOOOO");
-            
             Iterator corpus_iter = corpus.iterator();
             
             while (corpus_iter.hasNext()) {
@@ -1044,13 +923,11 @@ public class THDInstance {
                 AnnotationSet as_all = doc.getAnnotations();
                 AnnotationSet as_hearst = as_all.get("h");
                 Iterator ann_iter = as_hearst.iterator();
-                //System.out.println(as_hearst.size());
                 while (ann_iter.hasNext()) {
                     Annotation isaAnnot = (gate.Annotation) ann_iter.next();
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-                    //System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -1061,7 +938,6 @@ public class THDInstance {
                     hypObj.setAccuracy("0.77");
                     hypObj.setBounds("+- 2.5%");
                    hypernymsList.add(hypObj);
-//                    return hypObj;
                 }
             }
             
@@ -1087,7 +963,7 @@ public class THDInstance {
             }else if(kb.equals("live")){
                 path = Settings.NL_WIKIPEDIA_LIVE_EXPORT+entity.replace(" ", "_");            
             }
-            System.out.println(path);
+
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
             URLConnection connection = url.openConnection();
@@ -1101,7 +977,6 @@ public class THDInstance {
             }
             in.close();
             Article article = new Article(buffer.toString(),"en");
-            //System.out.println(article.getFirstSection());
             Document document = Factory.newDocument(article.getFirstSection());
             Corpus corpus = Factory.newCorpus("");
             corpus.add(document);
@@ -1115,13 +990,11 @@ public class THDInstance {
                 AnnotationSet as_all = doc.getAnnotations();
                 AnnotationSet as_hearst = as_all.get("h");
                 Iterator ann_iter = as_hearst.iterator();
-                //System.out.println(as_hearst.size());
                 while (ann_iter.hasNext()) {
                     Annotation isaAnnot = (gate.Annotation) ann_iter.next();
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-                    //System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -1132,7 +1005,6 @@ public class THDInstance {
                     hypObj.setAccuracy("0.89");
                     hypObj.setBounds("+- 2%");
                     hypernymsList.add(hypObj);
-//                    return hypObj;
                 }
             }
             
@@ -1180,7 +1052,7 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                // TODO
+
             }
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
 
@@ -1234,15 +1106,12 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                System.out.println("PROBLEM 1 " + e.toString());
             }
             
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
             hypernymExtractionPipelineDE.add(japeCandidatesPR);
             
         } catch (ResourceInstantiationException ex) {
-            System.out.println("PROBLEM 2 " + ex.toString());
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         }
         
@@ -1291,8 +1160,6 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
 
@@ -1306,8 +1173,6 @@ public class THDInstance {
     
     private static void assambleEntityExtractionPipelineEN(){
         try {
-            //System.out.println("Initialization of English Entity extraction pipeline...");
-            //System.out.println(thdInstance.getClass().getResource(enEntityExtractionGrammar));
             URL url = thdInstance.getClass().getResource(enEntityExtractionGrammar);
             File japeOrigFile = new File(url.getFile());
             java.net.URI japeURI = japeOrigFile.toURI();
@@ -1317,8 +1182,6 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
 
             FeatureMap tokenizerFeatureMap = Factory.newFeatureMap();        
@@ -1344,10 +1207,7 @@ public class THDInstance {
     }
     
     private static void assambleEntityExtractionPipelineDE(){
-        try {
-                    
-            //System.out.println("Initializing DE pipeline");
-
+        try {                    
             FeatureMap resetFeatureMap = Factory.newFeatureMap();
             ProcessingResource resetPR = (ProcessingResource) Factory.createResource("gate.creole.annotdelete.AnnotationDeletePR", resetFeatureMap);
                     
@@ -1371,7 +1231,6 @@ public class THDInstance {
             //JAPE Entity Extraction grammar
             URL url =  thdInstance.getClass().getResource(deEntityExtractionGrammar);
             
-            //System.out.println(url);
             File japeOrigFile = new File(url.getFile());
             java.net.URI japeURI = japeOrigFile.toURI();
             FeatureMap transducerFeatureMap = Factory.newFeatureMap();
@@ -1380,8 +1239,6 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
                     
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
@@ -1400,9 +1257,6 @@ public class THDInstance {
         
         try {
         
-            //System.out.println("First time running NL pipeline");
-            //System.out.println(nlEntityExtractionGrammar);
-
             FeatureMap resetFeatureMap = Factory.newFeatureMap();
             ProcessingResource resetPR = (ProcessingResource) Factory.createResource("gate.creole.annotdelete.AnnotationDeletePR", resetFeatureMap);
                     
@@ -1433,8 +1287,6 @@ public class THDInstance {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
                     
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
@@ -1455,8 +1307,8 @@ public class THDInstance {
     }
          
     private static void readSettings(Properties prop){
-        gateHome = prop.getProperty("gateHome"); 
-        docAcquisitionPlugin = prop.getProperty("docAcquisitionPlugin"); 
+        
+        gateHome = prop.getProperty("gateHome");
         pluginHome = prop.getProperty("pluginHome");
         
         enEntityExtractionGrammar = prop.getProperty("enEntityExtractionGrammar");
@@ -1488,7 +1340,6 @@ public class THDInstance {
             annieHome = new File(pluginsHome, "ANNIE").toURL();
             taggerHome = new File(pluginsHome, "Tagger_Framework").toURL();
         } catch (java.net.MalformedURLException e) {
-            //System.out.println(e.toString());            
         }
         try {
             Gate.init();
@@ -1523,7 +1374,6 @@ public class THDInstance {
     }
     
     public ArrayList<Entity> extractEntityCandidatesDE(String query, String lang, String entity_type){
-        System.out.println("Find page for: " + query);
         try {
             Document doc = Factory.newDocument(query);
             doc.setName("Query_Document");
@@ -1534,13 +1384,11 @@ public class THDInstance {
             deEntityExtractionPipeline.execute();
             
             Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-            //System.out.println("DE Entity Extraction pipeline finished");
             ArrayList<Entity> candidates = new ArrayList<Entity>();
             
             Document d = docs[0];
             AnnotationSet as_all = d.getAnnotations();
             if(entity_type.equals("all") || entity_type.equals("ne")){
-                //System.out.println("Found AS: "+ as_all.size());
                 AnnotationSet as_entity = as_all.get("ne");
 
                 Iterator anot = as_entity.iterator();
@@ -1551,11 +1399,9 @@ public class THDInstance {
                         Node annEnd = isaAnnot.getEndNode();
                         AnnotationSet as_token = as_all.get("Token",annStart.getOffset(), annEnd.getOffset() );
                         String content = "";
-                        System.out.println("size: " + as_token.size());
                         
                         if (as_token.size()>1 ) {
                             content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                    
-    //                        System.out.println("lemma: " + tok.getFeatures().get("lemma"));
                         }else{
                             Iterator as_token_iter = as_token.iterator();
                             
@@ -1575,7 +1421,7 @@ public class THDInstance {
                 }
             }
             if(entity_type.equals("all") || entity_type.equals("ce")){
-                //System.out.println("Chosen all entities");
+
                 AnnotationSet as_common_entity = as_all.get("e");
                 Iterator anot_e = as_common_entity.iterator();
                 
@@ -1584,17 +1430,13 @@ public class THDInstance {
                         Annotation isaAnnot = (gate.Annotation) anot_e.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         AnnotationSet as_token = as_all.get("Token",annStart.getOffset(), annEnd.getOffset() );
                         
                         String content = "";
-                        System.out.println("size: " + as_token.size());
                         
                         if (as_token.size()>1 ) {
                             content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                    
-    //                        System.out.println("lemma: " + tok.getFeatures().get("lemma"));
-                        }else{
+                        } else {
                             Iterator as_token_iter = as_token.iterator();
                             
                             Annotation tok = (gate.Annotation)as_token_iter.next();
@@ -1606,22 +1448,17 @@ public class THDInstance {
                                 content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                                
                             }
                         }
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString(), annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 2");
                        Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
-            //System.out.println("Number of extracted candidates: "+candidates.size());
             return candidates;
             
         } catch (ExecutionException ex) {
-            //System.out.println("Problem 1"+ex.getMessage());
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ResourceInstantiationException ex) {
-            //System.out.println("Problem 2"+ex.getMessage());
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
@@ -1639,13 +1476,11 @@ public class THDInstance {
             nlEntityExtractionPipeline.execute();
             
             Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-            //System.out.println("NL Entity Extraction pipeline finished");
             ArrayList<Entity> candidates = new ArrayList<Entity>();
             
             Document d = docs[0];
             AnnotationSet as_all = d.getAnnotations();
             
-            //System.out.println("Found AS: "+ as_all.size());
             if(entity_type.equals("all") || entity_type.equals("ne")) {
                 
                 AnnotationSet as_entity = as_all.get("ne");
@@ -1655,13 +1490,9 @@ public class THDInstance {
                         Annotation isaAnnot = (gate.Annotation) anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "named entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 1");
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
@@ -1674,25 +1505,18 @@ public class THDInstance {
                         Annotation isaAnnot = (gate.Annotation) anot_e.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 2");
                        Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
-            //System.out.println("Number of extracted candidates: "+candidates.size());
             return candidates;
             
         } catch (ExecutionException ex) {
-            //System.out.println("Problem 1"+ex.getMessage());
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ResourceInstantiationException ex) {
-            //System.out.println("Problem 2"+ex.getMessage());
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
@@ -1712,13 +1536,11 @@ public class THDInstance {
             enEntityExtractionPipeline.execute();
             
             Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-            //System.out.println("EN Entity Extraction pipeline finished");
             ArrayList<Entity> candidates = new ArrayList<Entity>();
             
             Document d = docs[0];
             AnnotationSet as_all = d.getAnnotations();
             
-            //System.out.println("Found AS: "+ as_all.size());
             if(entity_type.equals("all") || entity_type.equals("ne")){
                 
                 AnnotationSet as_named_entity = as_all.get("ne");
@@ -1729,10 +1551,7 @@ public class THDInstance {
                         Annotation isaAnnot = (gate.Annotation) anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "named entity"));
                     } catch (InvalidOffsetException ex) {
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
@@ -1749,10 +1568,7 @@ public class THDInstance {
                         Annotation isaAnnot = (gate.Annotation) cn_anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content,  annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);

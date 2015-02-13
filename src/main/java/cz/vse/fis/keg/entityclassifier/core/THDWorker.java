@@ -1,6 +1,23 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * #%L
+ * Entityclassifier.eu NER CORE v3.9
+ * %%
+ * Copyright (C) 2015 Knowledge Engineering Group (KEG) and Web Intelligence Research Group (WIRG) - Milan Dojchinovski (milan.dojchinovski@fit.cvut.cz)
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.html>.
+ * #L%
  */
 package cz.vse.fis.keg.entityclassifier.core;
 
@@ -9,8 +26,11 @@ import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import cz.vse.fis.keg.entityclassifier.core.entitylinking.AllVoting;
 import cz.vse.fis.keg.entityclassifier.core.entitylinking.LinkedEntity;
 import cz.vse.fis.keg.entityclassifier.core.entitylinking.LuceneSearch;
+import cz.vse.fis.keg.entityclassifier.core.entitylinking.SFISearch;
+import cz.vse.fis.keg.entityclassifier.core.entitylinking.SurfaceFormSimilarity;
 import cz.vse.fis.keg.entityclassifier.core.mongodb.MongoDBClient;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaMapping;
 import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyManager;
@@ -25,6 +45,7 @@ import cz.vse.fis.keg.entityclassifier.core.vao.Entity;
 import cz.vse.fis.keg.entityclassifier.core.vao.Hypernym;
 import cz.vse.fis.keg.entityclassifier.core.vao.Type;
 import cz.vse.fis.keg.entityclassifier.core.entitylinking.WikipediaSearch;
+import cz.vse.fis.keg.entityspotting.SemiTagsSpotting;
 import gate.Annotation;
 import gate.AnnotationSet;
 import gate.Corpus;
@@ -50,7 +71,6 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.text.DecimalFormat;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -79,16 +99,27 @@ public class THDWorker {
         assamblePipelines();
     }
     
-    public ArrayList<Entity> processTextAPI_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter, String linkingMethod) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
+    public ArrayList<Entity> processTextAPI_MT(
+            String query, 
+            String lang, 
+            String entity_type, 
+            String knowledge_base, 
+            String[] provenance, 
+            boolean priorityEntityLinking, 
+            String typesFilter,
+            String spottingMethod,
+            String linkingMethod,
+            String tmpPar) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
         
         ArrayList<Entity> resultEntities = new ArrayList<Entity>();        
         ArrayList<Entity> extractedEntities = new ArrayList<Entity>();
 
-        extractedEntities = extractEntityCandidates(query, lang, entity_type);
+        extractedEntities = extractEntityCandidates(query, lang, entity_type, spottingMethod);
+        
         System.out.println("Extracted candidates: " + extractedEntities.size());
         RedisClient redis = RedisClient.getInstance();
+        
         for(Entity e : extractedEntities) {
-//            System.out.println("Extracted Entity:" + e.getUnderlyingString());
             Entity foundEntity = new Entity();;
             String entityString = e.getUnderlyingString().trim();
 
@@ -96,34 +127,34 @@ public class THDWorker {
             boolean continueLinking = true;
             String longestEntityPage = null;
             String[] words = null;
-
+            
             while(continueLinking) {
-                                
+                
                 if(knowledge_base.equals("linkedHypernymsDataset")) {
                     
                     String linkedEntityStr = redis.getValue(entityString + lang + "linkedHypernymsDataset"+linkingMethod);
 
                     if(linkedEntityStr == null) {
 
-//                        System.out.println("not found in cache");
-//                        entity_title = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
                         if(linkingMethod.equals("LuceneSearch")) {
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
-//                            System.out.println("================================");
-//                            System.out.println(linkedEntity.getPageTitle());
-//                            System.out.println(linkedEntity.getConfidence());
-//                            System.out.println("================================");
-                        } else if(linkingMethod.equals("WikipediaSearch")){
-                            linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "local");                            
-//                            System.out.println("================================");
-//                            System.out.println(linkedEntity.getPageTitle());
-//                            System.out.println(linkedEntity.getConfidence());
-//                            System.out.println("================================");
+                        } else if(linkingMethod.equals("AllVoting")) {
+                            linkedEntity = AllVoting.getInstance().findWikipediaArticle(entityString, lang, "local");
+                        } else if(linkingMethod.equals("SurfaceFormSimilarity")) {
+                            linkedEntity = SurfaceFormSimilarity.getInstance().findWikipediaArticle(entityString, lang, "local");
+                        } else if(linkingMethod.equals("LuceneSearchSkipDisPage")) {
+                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticleSkipDisambiguationPage(entityString, lang, "local");
+                        } else if(linkingMethod.equals("SFISearch")) {
+                            linkedEntity = SFISearch.getInstance().findWikipediaArticle(entityString, lang);
+                        }else if(linkingMethod.equals("WikipediaSearch")) {
+                            if(tmpPar.equals("irapi")) {
+                                linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
+                            } else {
+                                linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
+                            }
                         } else {
-                            System.out.println("PROBLEM");
                         }
                         if(linkedEntity != null) {
-//                        System.out.println(entity_title);
                             redis.setKey(entityString + lang + "linkedHypernymsDataset"+linkingMethod, linkedEntity.toString());
                         }
                         
@@ -132,7 +163,6 @@ public class THDWorker {
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                        System.out.println("found in cache");
                     }
                 }else if(knowledge_base.equals("live")) {
                     
@@ -140,7 +170,6 @@ public class THDWorker {
                     
                     if(linkedEntityStr == null) {
                         
-//                        System.out.println("not found in cache");                        
                         linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
                         if(linkedEntity != null) {
                             redis.setKey(entityString+lang + "live"+linkingMethod, linkedEntity.toString());
@@ -150,7 +179,6 @@ public class THDWorker {
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                        System.out.println("found in cache");
                     }
                     
                 } else if(knowledge_base.equals("local")){
@@ -158,24 +186,27 @@ public class THDWorker {
 
                     if(linkedEntityStr == null) {
                         
-//                        System.out.println("not found in cache");
                         if(linkingMethod.equals("LuceneSearch")) {
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
+                        } else if(linkingMethod.equals("LuceneSearchSkipDisPage")) {
+                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticleSkipDisambiguationPage(entityString, lang, "local");
                         } else if(linkingMethod.equals("WikipediaSearch")) {
                             linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "local");                        
+                        } else if(linkingMethod.equals("AllVoting")) {
+                            linkedEntity = AllVoting.getInstance().findWikipediaArticle(entityString, lang,"local");
+                        } else if(linkingMethod.equals("SurfaceFormSimilarity")) {
+                            linkedEntity = SurfaceFormSimilarity.getInstance().findWikipediaArticle(entityString, lang,"local");
                         } else {
-                            System.out.println("PROBLEM");
                         }
+                        
                         if(linkedEntity != null) {
                             redis.setKey(entityString + lang + "local"+linkingMethod, linkedEntity.toString());
-                        }                        
+                        }
                     }else {
                         // Linked entity found in cache.
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-
-//                        System.out.println("found in cache");
                     }
                 }
                     
@@ -185,7 +216,6 @@ public class THDWorker {
                         words = entityString.split("\\s+");
                         if(words.length > 1) {
                             entityString = entityString.split("\\s+", 2)[1];
-//                            entityString = entityString.split(" ", 2)[1];
                             // nothing, try to link again with shorter text
                         } else {
                         // ENTITY LINKED or CANNOT be LINKED
@@ -233,10 +263,6 @@ public class THDWorker {
                         continueLinking = false;
                     }
                 } else {
-                    
-//                    System.out.println("entity title mapped to DBpedia");
-//                    System.out.println(linkedEntity.getPageTitle());
-//                    System.out.println(linkedEntity.getConfidence());
                     // entity mapped, checking types
                     HashSet<Hypernym> hypernymsList = null;
                     if (knowledge_base.equals("live")) {
@@ -264,8 +290,7 @@ public class THDWorker {
                             type.setEntityLabel(h.getEntity());
                             type.setEntityURI(h.getEntityURL());
                             type.setTypeLabel(h.getType());
-                            type.setTypeURI(h.getTypeURL());                            
-
+                            type.setTypeURI(h.getTypeURL());
                             type.setProvenance(h.getOrigin());
                             
                             Confidence classificationConf = new Confidence();
@@ -284,7 +309,6 @@ public class THDWorker {
                             linkingConf.setValue(fConfidence);
                             
                             entityTypes.add(type);
-//                            System.out.println("Yes");
                             
                         }
                         
@@ -293,6 +317,7 @@ public class THDWorker {
                         
                         continueLinking = false;
                     } else {
+                        
                             // NO TYPES
                             // if priority, then end, otherwise continue
                             if(priorityEntityLinking) {
@@ -337,11 +362,11 @@ public class THDWorker {
                             } else {
                                 // PRIORITY OFF, NO TYPES found
                                 // no priority linking continue to search
+                                
                                 words = entityString.split("\\s+");
                                 if(words.length > 1) {
                                     // PRIORITY OFF, MORE SEARCHING
                                     entityString = entityString.split("\\s+", 2)[1];
-//                                    entityString = entityString.split(" ", 2)[1];
                                     if(longestEntityPage == null){
                                         longestEntityPage = linkedEntity.getPageTitle();
                                     }
@@ -386,6 +411,7 @@ public class THDWorker {
                                         
                                         t.setEntityLabel(longestEntityPage);
                                     } else {
+                                        
                                         foundEntity.setUnderlyingString(e.getUnderlyingString());
                                         switch(lang){
                                             case "en":
@@ -420,130 +446,173 @@ public class THDWorker {
                                     continueLinking = false;
                                 }
                             }
-                        }
-                    // Align the DE/NL enity URIs with EN URI
-//                    switch(lang){
-//                        case "de":
-//                            // Spawning one more entity with just another localized URI
-////                            HashSet<Hypernym> resHypListEnde = new HashSet();
-//
-//                            Entity replEntityDE = new Entity();
-//                            replEntityDE.setStartOffset(e.getStartOffset());
-//                            replEntityDE.setEndOffset(e.getEndOffset());
-//                            replEntityDE.setEntityType(e.getEntityType());
-//                            replEntityDE.setUnderlyingString(foundEntity.getUnderlyingString());
-//                            ArrayList<Type> newArrayTypes = new ArrayList();
-//                            
-//                            boolean addEntity = false;
-//                            
-//                            for(Type t : foundEntity.getTypes()) {
-//                                
-//                                if(t.getEntityURI().startsWith("http://de.dbpedia.org/resource/")
-//                                        && (t.getProvenance().equals("thd")
-//                                        || t.getProvenance().equals("thd-derived")
-//                                        )){
-//                                    BasicDBObject queryObj = new BasicDBObject();
-//                                    queryObj.append("de_uri",t.getEntityURI());
-//                                    BasicDBObject projObj = new BasicDBObject();
-//                                    projObj.append("en_uri", 1);
-//                                    
-//                                    DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
-//                                    
-//                                    if(resObj != null) {
-//                                        
-//                                        addEntity = true;
-//                                        String enInterLangLink = resObj.get("en_uri").toString();
-//                                        Type newType = new Type();
-//                                        newType.setConfidence(t.getConfidence());
-//                                        newType.setEntityLabel(t.getEntityLabel());
-//                                        newType.setEntityURI(enInterLangLink);
-//                                        newType.setProvenance(t.getProvenance());
-//                                        newType.setTypeLabel(t.getTypeLabel());
-//                                        newType.setTypeURI(t.getTypeURI());
-//                                        
-//                                        replEntityDE.setTypes(foundEntity.getTypes());
-//                                        resultEntities.add(replEntityDE);
-//                                        
-//                                    }
-//                                }
-//                            }
-////                            resHypList.addAll(resHypListEnde);
-//                            break;
-//                        
-//                        } 
-                    // end - entity mapped
-//                    switch(lang){
-//                        case "de":
-//                            // Spawning one more entity with just another localized URI
-//                            Entity replEntityDE = new Entity();
-//                            replEntityDE.setStartOffset(e.getStartOffset());
-//                            replEntityDE.setEndOffset(e.getEndOffset());
-//                            replEntityDE.setEntityType(e.getEntityType());
-//                            replEntityDE.setUnderlyingString(foundEntity.getUnderlyingString());
-//                            replEntityDE.setTypes(foundEntity.getTypes());
-//                            resultEntities.add(replEntityDE);
-//
-//                            break;
-//                        case "nl":
-//                            // Spawning one more entity with just another localized URI
-//                            Entity replEntityNL = new Entity();
-//                            replEntityNL.setStartOffset(e.getStartOffset());
-//                            replEntityNL.setEndOffset(e.getEndOffset());
-//                            replEntityNL.setEntityType(e.getEntityType());
-//                            replEntityNL.setUnderlyingString(foundEntity.getUnderlyingString());
-//                            replEntityNL.setTypes(foundEntity.getTypes());
-//                            resultEntities.add(replEntityNL);
-//                            
-//                            break;
-//                    }
+                        }                    
                 }
             }
-        }
-
+        }        
+        
         // filtering out types
         if(typesFilter.equals("dbo")) {
-            
-            ArrayList<Entity> dboEntityList = new ArrayList();
+
             for(Entity e  : resultEntities){
-                for(Type t : e.getTypes()){
-                    if(t.getTypeURI().contains("ontology")) {
-                        dboEntityList.add(e);
+                
+                String tmpEntityURI = "";
+                String tmpEntityLabel = "";
+                Confidence tmpLinkConf = null;
+                
+                if(e.getTypes() != null) {
+                    ArrayList<Type> dboTypes = new ArrayList();
+                    for(Type t : e.getTypes()){
+                        if(t.getTypeURI() != null) {
+                            tmpEntityURI = t.getEntityURI();
+                            tmpEntityLabel = t.getEntityLabel();
+                            tmpLinkConf = t.getLinkingConfidence();
+                            if(t.getTypeURI().contains("ontology")) {
+                                dboTypes.add(t);
+                            }
+                        }
                     }
+                    if(dboTypes.isEmpty()) {
+                        Type t = new Type();
+                        t.setEntityLabel(tmpEntityLabel);
+                        t.setEntityURI(tmpEntityURI);
+                        t.setLinkingConfidence(tmpLinkConf);
+                        dboTypes.add(t);
+                    }
+                    e.setTypes(dboTypes);
                 }
             }
-            resultEntities = dboEntityList;
             
         } else if(typesFilter.equals("dbinstance")){
             
-            ArrayList<Entity> dbinstanceEntityList = new ArrayList();
-            for(Entity e  : resultEntities){
-                for(Type t : e.getTypes()){
-                    if(t.getTypeURI().contains("resource")) {
-                        dbinstanceEntityList.add(e);
-                    }                
+            for(Entity e  : resultEntities) {
+                String tmpEntityURI = "";
+                String tmpEntityLabel = "";
+                Confidence tmpLinkConf = null;
+                
+                ArrayList<Type> dboTypes = new ArrayList();
+                
+                if(e.getTypes() != null) {
+                    for(Type t : e.getTypes()){
+                        if(t.getTypeURI() != null) {
+                            tmpEntityURI = t.getEntityURI();
+                            tmpEntityLabel = t.getEntityLabel();
+                            tmpLinkConf = t.getLinkingConfidence();
+                            if(t.getTypeURI().contains("resource")) {
+                                dboTypes.add(t);
+                            }
+                        }
+                    }
                 }
+                
+                if(dboTypes.isEmpty()) {
+                    Type t = new Type();
+                    t.setEntityLabel(tmpEntityLabel);
+                    t.setEntityURI(tmpEntityURI);
+                    t.setLinkingConfidence(tmpLinkConf);
+                    dboTypes.add(t);
+                }
+                e.setTypes(dboTypes);
             }
-            resultEntities = dbinstanceEntityList;
         
         } else if(typesFilter.equals("all")){
             return resultEntities;
         }
-        
         return resultEntities;
     }
     
+    public ArrayList<Entity> classifyEntityAPI_MT(
+            String entityURI, 
+            String lang,
+            String knowledge_base, 
+            String[] provenance, 
+            String typesFilter) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
+        
+        ArrayList<Entity> resultEntities = new ArrayList<Entity>();
+        // entity mapped, checking types
+        String pageTitle = entityURI.split("/")[entityURI.split("/").length-1].replace("_", " ");
+        Entity entity = new Entity();
+        entity.setEntityLink(entityURI);
+        entity.setUnderlyingString(pageTitle);
+
+        HashSet<Hypernym> hypernymsList = null;
+        if (knowledge_base.equals("live")) {
+            hypernymsList = extractEntityTypes(pageTitle, lang, "live", provenance);
+        } else if (knowledge_base.equals("local")) {                    
+            hypernymsList = extractEntityTypes(pageTitle, lang, "local", provenance);
+        } else if (knowledge_base.equals("linkedHypernymsDataset")) {
+            hypernymsList = extractEntityTypes(pageTitle, lang, "linkedHypernymsDataset", provenance);
+        }
+        
+        if (hypernymsList.size() > 0) {
+            // TYPES FOUND
+            // found types, ending linking
+            ArrayList<Type> entityTypes = new ArrayList<Type>();
+            
+            for(Hypernym h : hypernymsList) {
+                Type type = new Type();
+                type.setEntityLabel(h.getEntity());
+                type.setEntityURI(h.getEntityURL());
+                type.setTypeLabel(h.getType());
+                type.setTypeURI(h.getTypeURL());
+                type.setProvenance(h.getOrigin());
+                            
+                Confidence classificationConf = new Confidence();
+                classificationConf.setValue(Double.parseDouble(h.getAccuracy()));
+                classificationConf.setType("classification");
+                type.setClassificationConfidence(classificationConf);
+                entityTypes.add(type);
+            }
+            entity.setTypes(entityTypes);
+            resultEntities.add(entity);
+        }
+        
+        // filtering out types
+        if(typesFilter.equals("dbo")) {
+
+            for(Entity e  : resultEntities){
+                if(e.getTypes() != null) {
+                    ArrayList<Type> dboTypes = new ArrayList();
+                    for(Type t : e.getTypes()){
+                        if(t.getTypeURI() != null) {
+                            if(t.getTypeURI().contains("ontology")) {
+                                dboTypes.add(t);
+                            }
+                        }
+                    }
+                    e.setTypes(dboTypes);
+                }
+            }
+            
+        } else if(typesFilter.equals("dbinstance")){
+
+            for(Entity e  : resultEntities){
+                ArrayList<Type> dboTypes = new ArrayList();
+                for(Type t : e.getTypes()){
+                    if(t.getTypeURI() != null) {
+                        if(t.getTypeURI().contains("resource")) {
+                            dboTypes.add(t);
+                        }
+                    }
+                }                
+                e.setTypes(dboTypes);
+            }
+        
+        } else if(typesFilter.equals("all")){
+            return resultEntities;
+        }
+        return resultEntities;
+    }    
     public ArrayList<Hypernym> processText_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
         try {
         ArrayList<Entity> extractedEntities = new ArrayList<Entity>();
 
-        extractedEntities = extractEntityCandidates(query, lang, entity_type);
+        extractedEntities = extractEntityCandidates(query, lang, entity_type, "");
         System.out.println("Extracted candidates: " + extractedEntities.size());
         HashSet<Hypernym> resHypList = new HashSet();
         RedisClient redis = RedisClient.getInstance();
         for(Entity e : extractedEntities){
-//            System.out.println("processing one candidate" + e.getUnderlyingString());
             String entityString = e.getUnderlyingString().trim();
-//            System.out.println("check 1");
                 LinkedEntity linkedEntity = null;
                 boolean continueLinking = true;
                 String longestEntityPage = null;
@@ -554,7 +623,6 @@ public class THDWorker {
                     if(knowledge_base.equals("linkedHypernymsDataset")){
                         String linkedEntityStr = redis.getValue(entityString + lang + "linkedHypernymsDataset");
                         if(linkedEntityStr == null) {
-//                            System.out.println("not found in cache");
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
                             if(linkedEntity != null){
                                 redis.setKey(entityString + lang + "linkedHypernymsDataset", linkedEntity.toString());
@@ -563,12 +631,10 @@ public class THDWorker {
                             linkedEntity = new LinkedEntity();
                             linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                             linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                            System.out.println("found in cache: " + entity_title);
                         }
                     }else if(knowledge_base.equals("live")) {
                         String linkedEntityStr = redis.getValue(entityString + lang + "live");
                         if(linkedEntityStr == null) {
-//                            System.out.println("not found in cache");
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
                             if(linkedEntityStr != null) {                                
                                 redis.setKey(entityString + lang + "local", linkedEntity.toString());
@@ -577,7 +643,6 @@ public class THDWorker {
                     } else if(knowledge_base.equals("local")) {
                         String linkedEntityStr = redis.getValue(entityString + lang + "local");
                         if(linkedEntityStr == null) {
-//                            System.out.println("not found in cache");
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
                             if(linkedEntityStr != null){
                                 redis.setKey(entityString + lang + "local", linkedEntity.toString());
@@ -586,17 +651,14 @@ public class THDWorker {
                             linkedEntity = new LinkedEntity();
                             linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                             linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                            System.out.println("found in cache");
                         }
                     }
 
                     // ENTITY NOT MAPPED TO DBpedia
                     if ( linkedEntity == null ) {
-//                        System.out.println("this shit: " + entityString);
                         words = entityString.split("\\s+");
                         if(words.length > 1) {
                             entityString = entityString.split("\\s+", 2)[1];
-//                            entityString = entityString.split(" ", 2)[1];
                             // nothing, try to link again with shorter text
                         } else {
                             // ENTITY LINKED or CANNOT be LINKED
@@ -651,7 +713,6 @@ public class THDWorker {
                             continueLinking = false;
                         }
                     } else {
-//                        System.out.println("Entity mapped to DBpedia");
                         // entity mapped, checking types
                         HashSet<Hypernym> hypernymsList = null;
                     
@@ -712,7 +773,6 @@ public class THDWorker {
                                 if(words.length > 1) {
                                     // PRIORITY OFF, MORE SEARCHING
                                     entityString = entityString.split("\\s+", 2)[1];
-//                                    entityString = entityString.split(" ", 2)[1];
                                     if(longestEntityPage == null){
                                         longestEntityPage = linkedEntity.getPageTitle();
                                     }
@@ -781,7 +841,6 @@ public class THDWorker {
                                     BasicDBObject projObj = new BasicDBObject();
                                     projObj.append("en_uri", 1);
                                     
-//                                    System.out.println("link: " + h.getEntityURL());
                                     DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
                                     
                                     if(resObj != null) {
@@ -889,24 +948,42 @@ public class THDWorker {
         return null;
     }
     
-    public ArrayList<Entity> extractEntityCandidates(String query, String lang, String entity_type) throws ResourceInstantiationException, ExecutionException {
+    public ArrayList<Entity> extractEntityCandidates(
+            String query, 
+            String lang, 
+            String entity_type,
+            String spotting_method) throws ResourceInstantiationException, ExecutionException {
         
         ArrayList<Entity> candidates = null;
         switch (lang) {
             case "en":
-                candidates = extractEntityCandidatesEN(query, lang, entity_type);
+                if(spotting_method.equals("CRF")) {
+                    candidates = SemiTagsSpotting.getInstance().getEntityMentions(query, lang);
+                } else {
+                    candidates = extractEntityCandidatesEN(query, lang, entity_type);
+                }
                 break;
             case "de":
-                candidates = extractEntityCandidatesDE(query, lang, entity_type);
+                if(spotting_method.equals("CRF")) {
+                    candidates = SemiTagsSpotting.getInstance().getEntityMentions(query, lang);
+                } else {
+                    candidates = extractEntityCandidatesDE(query, lang, entity_type);
+                }
                 break;
             case "nl":
-                candidates = extractEntityCandidatesNL(query, lang, entity_type);
+                if(spotting_method.equals("CRF")) {
+                    candidates = SemiTagsSpotting.getInstance().getEntityMentions(query, lang);
+                } else {
+                    candidates = extractEntityCandidatesNL(query, lang, entity_type);
+                }
                 break;
         }
 
         return candidates;
-    }  
+    }
+    
     public ArrayList<Entity> extractEntityCandidatesEN(String query, String lang, String entity_type) throws ResourceInstantiationException, ExecutionException{
+        
         Document doc = Factory.newDocument(query);
         doc.setName("Query_Document");
         Corpus corpus = Factory.newCorpus("");
@@ -916,13 +993,11 @@ public class THDWorker {
         enEntityExtractionPipeline.execute();
             
         Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-        //System.out.println("EN Entity Extraction pipeline finished");
         ArrayList<Entity> candidates = new ArrayList<Entity>();
             
         Document d = docs[0];
         AnnotationSet as_all = d.getAnnotations();
             
-            //System.out.println("Found AS: "+ as_all.size());
             if(entity_type.equals("all") || entity_type.equals("ne")){
                 
                 AnnotationSet as_named_entity = as_all.get("ne");
@@ -933,10 +1008,7 @@ public class THDWorker {
                         Annotation isaAnnot = (gate.Annotation) anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-//                        System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "named entity"));
                     } catch (InvalidOffsetException ex) {
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
@@ -945,7 +1017,6 @@ public class THDWorker {
             }
             if(entity_type.equals("all") || entity_type.equals("ce")) {
 
-//                System.out.println("trying to extract common");
                 AnnotationSet as_common_nouns = as_all.get("e");
                 Iterator cn_anot = as_common_nouns.iterator();
 
@@ -954,10 +1025,7 @@ public class THDWorker {
                         Annotation isaAnnot = (gate.Annotation) cn_anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-//                        System.out.println("Start offset"+ annStart.getOffset());
-//                        System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-//                        System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
@@ -970,7 +1038,6 @@ public class THDWorker {
     }
     public ArrayList<Entity> extractEntityCandidatesDE(String query, String lang, String entity_type) throws ResourceInstantiationException, ExecutionException {
         
-//        System.out.println("opa");
         Document doc = Factory.newDocument(query);
             doc.setName("Query_Document");
             Corpus corpus = Factory.newCorpus("");
@@ -980,13 +1047,11 @@ public class THDWorker {
             deEntityExtractionPipeline.execute();
             
             Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-            //System.out.println("DE Entity Extraction pipeline finished");
             ArrayList<Entity> candidates = new ArrayList<Entity>();
             
             Document d = docs[0];
             AnnotationSet as_all = d.getAnnotations();
             if(entity_type.equals("all") || entity_type.equals("ne")){
-//                System.out.println("Found AS: "+ as_all.size());
                 AnnotationSet as_entity = as_all.get("ne");
 
                 Iterator anot = as_entity.iterator();
@@ -997,11 +1062,9 @@ public class THDWorker {
                         Node annEnd = isaAnnot.getEndNode();
                         AnnotationSet as_token = as_all.get("Token",annStart.getOffset(), annEnd.getOffset() );
                         String content = "";
-//                        System.out.println("size: " + as_token.size());
                         
                         if (as_token.size()>1 ) {
                             content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                    
-    //                        System.out.println("lemma: " + tok.getFeatures().get("lemma"));
                         }else{
                             Iterator as_token_iter = as_token.iterator();
                             
@@ -1021,7 +1084,6 @@ public class THDWorker {
                 }
             }
             if(entity_type.equals("all") || entity_type.equals("ce")){
-                //System.out.println("Chosen all entities");
                 AnnotationSet as_common_entity = as_all.get("e");
                 Iterator anot_e = as_common_entity.iterator();
                 
@@ -1030,16 +1092,12 @@ public class THDWorker {
                         Annotation isaAnnot = (gate.Annotation) anot_e.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         AnnotationSet as_token = as_all.get("Token",annStart.getOffset(), annEnd.getOffset() );
                         
                         String content = "";
-//                        System.out.println("size: " + as_token.size());
                         
                         if (as_token.size()>1 ) {
-                            content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                    
-    //                        System.out.println("lemma: " + tok.getFeatures().get("lemma"));
+                            content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
                         }else{
                             Iterator as_token_iter = as_token.iterator();
                             
@@ -1052,15 +1110,12 @@ public class THDWorker {
                                 content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();                                
                             }
                         }
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString(), annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 2");
                        Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
-            //System.out.println("Number of extracted candidates: "+candidates.size());
             Factory.deleteResource(doc);
             Factory.deleteResource(corpus);
             return candidates;
@@ -1077,13 +1132,11 @@ public class THDWorker {
             nlEntityExtractionPipeline.execute();
             
             Document[] docs = (Document[]) corpus.toArray(new Document[corpus.size()]);
-            //System.out.println("NL Entity Extraction pipeline finished");
             ArrayList<Entity> candidates = new ArrayList<Entity>();
             
             Document d = docs[0];
             AnnotationSet as_all = d.getAnnotations();
             
-            //System.out.println("Found AS: "+ as_all.size());
             if(entity_type.equals("all") || entity_type.equals("ne")) {
                 
                 AnnotationSet as_entity = as_all.get("ne");
@@ -1093,13 +1146,9 @@ public class THDWorker {
                         Annotation isaAnnot = (gate.Annotation) anot.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "named entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 1");
                         Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
@@ -1112,18 +1161,13 @@ public class THDWorker {
                         Annotation isaAnnot = (gate.Annotation) anot_e.next();
                         Node annStart = isaAnnot.getStartNode();
                         Node annEnd = isaAnnot.getEndNode();
-                        ////System.out.println("Start offset"+ annStart.getOffset());
-                        ////System.out.println("End offset"+ annEnd.getOffset());
                         String content = d.getContent().getContent(annStart.getOffset(), annEnd.getOffset()).toString();
-                        //System.out.println("Candidate: " + content);
                         candidates.add(new Entity(content, annStart.getOffset(), annEnd.getOffset(), "common entity"));
                     } catch (InvalidOffsetException ex) {
-                        //System.out.println("Problem in the loop 2");
                        Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
-            //System.out.println("Number of extracted candidates: "+candidates.size());
             Factory.deleteResource(doc);
             Factory.deleteResource(corpus);
             return candidates;
@@ -1141,8 +1185,6 @@ public class THDWorker {
     private void assambleEntityExtractionPipelineEN() {
         
         try {
-            //System.out.println("Initialization of English Entity extraction pipeline...");
-//            System.out.println("Grammar loc: " + Settings.EN_ENTITY_EXTRACTION_GRAMMAR);
             URL url = THDController.getInstance().getClass().getResource(Settings.EN_ENTITY_EXTRACTION_GRAMMAR);
             File japeOrigFile = new File(url.getFile());
             java.net.URI japeURI = japeOrigFile.toURI();
@@ -1152,8 +1194,6 @@ public class THDWorker {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
 
             FeatureMap tokenizerFeatureMap = Factory.newFeatureMap();        
@@ -1180,8 +1220,6 @@ public class THDWorker {
     private void assambleEntityExtractionPipelineDE(){
         try {
                     
-            //System.out.println("Initializing DE pipeline");
-
             FeatureMap resetFeatureMap = Factory.newFeatureMap();
             ProcessingResource resetPR = (ProcessingResource) Factory.createResource("gate.creole.annotdelete.AnnotationDeletePR", resetFeatureMap);
                     
@@ -1205,7 +1243,6 @@ public class THDWorker {
             //JAPE Entity Extraction grammar
             URL url =  THDController.getInstance().getClass().getResource(Settings.DE_ENTITY_EXTRACTION_GRAMMAR);
             
-            //System.out.println(url);
             File japeOrigFile = new File(url.getFile());
             java.net.URI japeURI = japeOrigFile.toURI();
             FeatureMap transducerFeatureMap = Factory.newFeatureMap();
@@ -1214,8 +1251,6 @@ public class THDWorker {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
                     
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
@@ -1230,11 +1265,7 @@ public class THDWorker {
         }    
     }
     private void assambleEntityExtractionPipelineNL(){        
-        try {
-        
-            //System.out.println("First time running NL pipeline");
-            //System.out.println(nlEntityExtractionGrammar);
-
+        try {        
             FeatureMap resetFeatureMap = Factory.newFeatureMap();
             ProcessingResource resetPR = (ProcessingResource) Factory.createResource("gate.creole.annotdelete.AnnotationDeletePR", resetFeatureMap);
                     
@@ -1266,8 +1297,6 @@ public class THDWorker {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                //System.out.println(e.toString());
             }
                     
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
@@ -1367,8 +1396,6 @@ public class THDWorker {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
-                System.out.println("PROBLEM 1 " + e.toString());
             }
             
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
@@ -1413,7 +1440,6 @@ public class THDWorker {
             ProcessingResource genTag = (ProcessingResource) Factory.createResource("gate.taggerframework.GenericTagger",taggerFeatureMap);
             hypernymExtractionPipelineNL.add(genTag);            
 
-//            URL url = new URL("file:/Users/Milan/Documents/research/repositories/linked-tv/code/thd-v04/THD-lib-v04/src/resources/nl_hearst_v2.jape");
             URL url = THDController.getInstance().getClass().getResource(Settings.NL_HYPERNYM_EXTRACTION_GRAMMAR);
             File japeOrigFile = new File(url.getFile());            
             java.net.URI japeURI = japeOrigFile.toURI();
@@ -1423,7 +1449,6 @@ public class THDWorker {
                 transducerFeatureMap.put("grammarURL", japeURI.toURL());
                 transducerFeatureMap.put("encoding", "UTF-8");
             } catch (MalformedURLException e) {
-                //System.out.println("Malformed URL of JAPE grammar");
             }
             ProcessingResource japeCandidatesPR = (ProcessingResource) Factory.createResource("gate.creole.Transducer", transducerFeatureMap);
 
@@ -1435,7 +1460,6 @@ public class THDWorker {
     }
 
     public HashSet<Hypernym> extractEntityTypes(String entity, String lang, String kb, String[] provenance) throws UnknownHostException{
-//        System.out.println("entity: " + entity);
         HashSet<Hypernym> hypernymsList = new HashSet();
         HashSet<Hypernym> thdHypernyms = new HashSet();
         HashSet<Hypernym> dbpediaHypernyms = new HashSet();
@@ -1573,7 +1597,6 @@ public class THDWorker {
             }else if(kb.equals("live")){
                 path = Settings.EN_WIKIPEDIA_LIVE_EXPORT+entity.replace(" ", "_");            
             }
-//            System.out.println(path);
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
             URLConnection connection = url.openConnection();
@@ -1601,7 +1624,6 @@ public class THDWorker {
                 AnnotationSet as_all = doc.getAnnotations();
                 AnnotationSet as_hearst = as_all.get("h");
                 Iterator ann_iter = as_hearst.iterator();
-                //System.out.println(as_hearst.size());
                 
                 while (ann_iter.hasNext()) {
                     
@@ -1609,7 +1631,6 @@ public class THDWorker {
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-                    //System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -1626,7 +1647,6 @@ public class THDWorker {
                     linkedEntityStr = redis.getValue(hypernym + "en" + kb);
                     
                     if( linkedEntityStr == null) {
-//                        System.out.println("other: hypernym page not in cache");
                         linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(hypernym, "en", kb);
                         if(linkedEntity != null) {
                             redis.setKey(hypernym + "en" + kb, linkedEntity.toString());
@@ -1635,7 +1655,6 @@ public class THDWorker {
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                        System.out.println("other: hypernym page in cache");
                     }
                     if(linkedEntity != null){
                         hypObj.setTypeURL("http://dbpedia.org/resource/" + linkedEntity.getPageTitle().replace(" ", "_"));                    
@@ -1659,7 +1678,6 @@ public class THDWorker {
     }
     
     public HashSet extractEntityTypesDE(String entity, String kb) {
-//        System.out.println("TEST: "  + kb);
         HashSet hypernymsList = new HashSet();
         try {
             URL url = null;
@@ -1669,7 +1687,6 @@ public class THDWorker {
             }else if(kb.equals("live")){
                 path = Settings.DE_WIKIPEDIA_LIVE_EXPORT + URLEncoder.encode(entity.replace(" ", "_"), "UTF-8");           
             }
-//            System.out.println(path);
 
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
@@ -1705,7 +1722,6 @@ public class THDWorker {
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-                    //System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -1718,7 +1734,6 @@ public class THDWorker {
                     String linkedEntityStr = null;
                     linkedEntityStr = redis.getValue(hypernym + "de" + kb);
                     if(linkedEntityStr == null) {
-//                        System.out.println("other: hypernym page not in cache");
                         linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(hypernym, "de", kb);
                         if(linkedEntity != null) {
                             redis.setKey(hypernym + "de" + kb, linkedEntity.toString());
@@ -1727,7 +1742,6 @@ public class THDWorker {
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                        System.out.println("other: hypernym page in cache");                    
                     }
                     if(linkedEntity != null){
                         hypObj.setTypeURL("http://de.dbpedia.org/resource/" + linkedEntity.getPageTitle().replace(" ", "_"));                    
@@ -1737,8 +1751,7 @@ public class THDWorker {
                     hypObj.setOrigin("thd");
                     hypObj.setAccuracy("0.77");
                     hypObj.setBounds("+- 2.5%");
-                   hypernymsList.add(hypObj);
-//                    return hypObj;
+                    hypernymsList.add(hypObj);
                 }
             }
             
@@ -1763,7 +1776,6 @@ public class THDWorker {
             }else if(kb.equals("live")){
                 path = Settings.NL_WIKIPEDIA_LIVE_EXPORT + URLEncoder.encode(entity.replace(" ", "_"), "UTF-8");          
             }
-//            System.out.println("path: " + path);
             StringBuffer buffer = new StringBuffer();
             url = new URL(path);
             URLConnection connection = url.openConnection();
@@ -1791,13 +1803,11 @@ public class THDWorker {
                 AnnotationSet as_all = doc.getAnnotations();
                 AnnotationSet as_hearst = as_all.get("h");
                 Iterator ann_iter = as_hearst.iterator();
-//                System.out.println(as_hearst.size());
                 while (ann_iter.hasNext()) {
                     Annotation isaAnnot = (gate.Annotation) ann_iter.next();
                     Node isaStart = isaAnnot.getStartNode();                               
                     Node isaEnd = isaAnnot.getEndNode();
                     String hypernym = doc.getContent().getContent(isaStart.getOffset(), isaEnd.getOffset()).toString();
-//                    System.out.println("HYPERNYM " + hypernym);
                     
                     Hypernym hypObj = new Hypernym();
                     hypObj.setEntity(entity);
@@ -1811,7 +1821,6 @@ public class THDWorker {
                     linkedEntityStr = redis.getValue(hypernym + "nl" + kb);
                     
                     if(linkedEntityStr == null) {
-//                        System.out.println("other: hypernym page not in cache");
                         linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(hypernym, "nl", kb);
                         if(linkedEntity != null) {
                             redis.setKey(hypernym + "nl" + kb, linkedEntity.toString());
@@ -1820,7 +1829,6 @@ public class THDWorker {
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-//                        System.out.println("other: hypernym page in cache");                    
                     }
                     if(linkedEntity != null){
                         hypObj.setTypeURL("http://nl.dbpedia.org/resource/" + linkedEntity.getPageTitle().replace(" ", "_"));                    
@@ -1856,28 +1864,13 @@ public class THDWorker {
             if(s != null) {
                 
                 HashSet tmp = getTHDHypernymsLHDv2(s, "en");
-//                System.out.println("passed 1 " + tmp.size());
                 if(tmp != null) {
-//                    Hypernym h = new Hypernym();
-//                    h.setEntity("Netherlands");
-//                    h.setEntityURL("http://dbpedia.org/resource/Netherlands");
-//                    h.setType("Country");
-//                    h.setTypeURL("http://dbpedia.org/resource/Country");
-//                    h.setAccuracy("14");
-//                    h.setBounds("+- 1");
-//                    h.setOrigin("thd");
-//                    h.setStartOffset(20L);
-//                    h.setEndOffset(31L);
-//                    h.setUnderlyingEntityText("some shit");
-//                    thdHypernyms.add(h);
-//                    System.out.println("try 1");
                     try {
                         thdHypernyms.addAll(tmp);
                     } catch(Exception ex) {
                         Logger.getLogger(THDWorker.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 } else {
-//                    System.out.println("null for " + entityTitle);
                 }            
             }
         }
@@ -1949,11 +1942,10 @@ public class THDWorker {
     }
         
     public HashSet getTHDHypernymsLHDv2(String entityTitle, String lang) throws UnknownHostException {
-        
+    
         HashSet hypernymsList = new HashSet();
         try {
             BasicDBObject queryObj = new BasicDBObject();
-//            System.out.println("Searching hypernym for entity: " + entityTitle);
             queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
             
             switch (lang) {
@@ -1987,6 +1979,7 @@ public class THDWorker {
                                 hypernym.setAccuracy(type.get("accuracy").toString());
                                 hypernym.setBounds(type.get("bounds").toString());
                                 hypernymsList.add(hypernym);
+                                
                                 
                                 OntoRecord initRecord = new OntoRecord();
                                 initRecord.setUri(type.get("uri").toString());
@@ -2074,8 +2067,6 @@ public class THDWorker {
                     
                     if(resObj != null){
                         
-//                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "de", "thd-derived"));
-                        
                         BasicDBList typesList = (BasicDBList)resObj.get("types");
                         
                         for(int i = 0; i < typesList.size(); i++) {
@@ -2111,6 +2102,7 @@ public class THDWorker {
                                         hypernymDerived.setEntityURL(notEncodedURIDe);
                                         hypernymDerived.setType(initRecord.getLabel());
                                         hypernymDerived.setTypeURL(initRecord.getUri());
+                                        hypernymDerived.setAccuracy(type.get("accuracy").toString());
                                         hypernymDerived.setOrigin("thd-derived");
                                         hypernymsList.add(hypernymDerived);
                                     }
@@ -2179,8 +2171,6 @@ public class THDWorker {
                     
                     if(resObj != null){
                         
-//                        hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
-                        
                         BasicDBList typesList = (BasicDBList)resObj.get("types");
                         
                         for(int i = 0; i < typesList.size(); i++) {
@@ -2192,7 +2182,6 @@ public class THDWorker {
                             // creating hierarchy from the dbpedia ontology
                             if(typeURI.equals("dbOnto")) {
                                 
-                                //System.out.println("dbOnto");
                                 Hypernym hypernym = new Hypernym();
                                 hypernym.setEntity(entityTitle);
                                 hypernym.setEntityURL(notEncodedURINl);
@@ -2217,6 +2206,7 @@ public class THDWorker {
                                         hypernymDerived.setEntityURL(notEncodedURINl);
                                         hypernymDerived.setType(initRecord.getLabel());
                                         hypernymDerived.setTypeURL(initRecord.getUri());
+                                        hypernymDerived.setAccuracy(type.get("accuracy").toString());
                                         hypernymDerived.setOrigin("thd-derived");
                                         hypernymsList.add(hypernymDerived);
                                     }
@@ -2286,7 +2276,6 @@ public class THDWorker {
 
         ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
         BasicDBObject queryObj = new BasicDBObject();
-        //System.out.println("Searching hypernym for entity: " + entityTitle);
         queryObj.append("label", entityTitle);
         queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
         
@@ -2332,7 +2321,6 @@ public class THDWorker {
                                 hypernymDerived.setAccuracy(type.get("accuracy").toString());
                                 hypernymDerived.setBounds(type.get("bounds").toString());
                                 hypernymsList.add(hypernymDerived);
-//                                System.out.println("hyp added, size: " + hypernymsList.size());
                             }
                         }
                     }
@@ -2400,7 +2388,6 @@ public class THDWorker {
                                         // superClass uri found
                                         // check if uri is dbOnto - create hierarchy
                                         // check if uri is dbRes - continue
-
                                         if(initialUri.contains("/resource/")){
                                             //System.out.println("Found superclass is dbres");
                                             // do nothing
@@ -2428,7 +2415,6 @@ public class THDWorker {
                                                     hypernymDerived.setAccuracy(type.get("accuracy").toString());
                                                     hypernymDerived.setBounds(type.get("bounds").toString());
                                                     hypernymsList.add(hypernymDerived);
-
                                                 }
                                             }
                                         } else {
@@ -2466,7 +2452,6 @@ public class THDWorker {
                     return hypernymsList;
                     
                 } else {
-//                    System.out.println("hypernym not found for " + entityTitle);
                     return hypernymsList;
                 }
             case "de":
@@ -2567,21 +2552,17 @@ public class THDWorker {
                                     initialUri = getSuperclass(initialUri, "de");
 
                                     if(initialUri == null){
-                                        //System.out.println("No superclass found, finishing searching");
                                         continueSearching = false;
 
                                     } else {
-                                        //System.out.println("Superclass found");
                                         // superClass uri found
                                         // check if uri is dbOnto - create hierarchy
                                         // check if uri is dbRes - continue
 
                                         if(initialUri.contains("/resource/")){
-                                            //System.out.println("Found superclass is dbres");
                                             // do nothing
                                             // continue to search
                                         } else if(initialUri.contains("/ontology/")) {
-                                            //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
                                             // create hierarchy
                                             continueSearching = false;
 
@@ -2641,25 +2622,19 @@ public class THDWorker {
                     return hypernymsList;
                     
                 } else {
-                    //System.out.println("hypernym not found for " + entityTitle);
                     return hypernymsList;
                 }
                 
             case "nl":
                 
                 resObj = MongoDBClient.getDBInstance().getCollection("nl_entities_thd").findOne(queryObj);                
-                        //System.out.println(resObj);
 
                 if(resObj != null){
                     
-                    //System.out.println("before " + hypernymsList.size());
                     hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
-                    //System.out.println("after " + hypernymsList.size());
 
-                    //System.out.println(resObj);
                     BasicDBList e = (BasicDBList)resObj.get("types");
                     DBObject type = (DBObject)e.get(0);
-                    //System.out.println("HYPENYM: " + type.get("label"));
                     
                     BasicDBList typesList = (BasicDBList)resObj.get("types");
                     DBObject firstType = (DBObject)typesList.get(0);
@@ -2704,7 +2679,6 @@ public class THDWorker {
                     else if(typeURI.equals("dbRes")) {
 
                         String mappedRes = DBpediaOntologyMapper.getInstance().mapNlResource(type.get("uri").toString());
-                        //System.out.println("dbRes");
                         if(mappedRes != null) {
                             Hypernym hypernym = new Hypernym();
                             hypernym.setEntity(entityTitle);
@@ -2755,17 +2729,14 @@ public class THDWorker {
 
                                     } else {
 
-                                        //System.out.println("Superclass found");
                                         // superClass uri found
                                         // check if uri is dbOnto - create hierarchy
                                         // check if uri is dbRes - continue
 
                                         if(initialUri.contains("/resource/")){
-                                            //System.out.println("Found superclass is dbres");
                                             // do nothing
                                             // continue to search
                                         } else if(initialUri.contains("/ontology/")) {
-                                            //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
                                             // create hierarchy
                                             continueSearching = false;
 
@@ -2824,7 +2795,6 @@ public class THDWorker {
                     return hypernymsList;
                     
                 } else {
-                    //System.out.println("hypernym not found for " + entityTitle);
                     return hypernymsList;
                 }
         }
@@ -2835,7 +2805,6 @@ public class THDWorker {
         HashSet hypernymsList = new HashSet();
         try {
             BasicDBObject queryObj = new BasicDBObject();
-            //System.out.println("Searching hypernym for entity: " + entityTitle);
             queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "dbpedia")));
             
             BasicDBList dbTypesList;
@@ -2860,10 +2829,9 @@ public class THDWorker {
                                 hypernym.setType(obj.get("label").toString());
                                 hypernym.setTypeURL(obj.get("uri").toString());
                                 hypernym.setOrigin("dbpedia");
-                                //System.out.println("TEST: " + obj.get("uri").toString());
+                                hypernym.setAccuracy("-1.0");
                                 if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                                     hypernymsList.add(hypernym);
-                                    //System.out.println("DBpedia ontology");
                                 }
                             }
                         }
@@ -2874,12 +2842,11 @@ public class THDWorker {
                     
                 case "de":
                     
-                    String uriDe = "http://de.dbpedia.org/resource/"+URLEncoder.encode(entityTitle.replace(" ", "_"),"UTF-8");
+                    String uriDe = "http://de.dbpedia.org/resource/"+entityTitle.replace(" ", "_");
                     queryObj.append("uri", uriDe);
                     DBCursor cursorDE = MongoDBClient.getDBInstance().getCollection("de_entities_dbpedia").find(queryObj);
                     
                     while(cursorDE.hasNext()) {
-                        
                         DBObject resObj = cursorDE.next();
                         if(resObj != null){
                             dbTypesList = (BasicDBList)resObj.get("types");
@@ -2894,10 +2861,9 @@ public class THDWorker {
                                 hypernym.setType(obj.get("label").toString());
                                 hypernym.setTypeURL(obj.get("uri").toString());
                                 hypernym.setOrigin("dbpedia");
-                                //System.out.println("TEST: " + obj.get("uri").toString());
+                                hypernym.setAccuracy("-1.0");
                                 if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                                     hypernymsList.add(hypernym);
-                                    //System.out.println("DBpedia ontology");
                                 }
                             }
                         }
@@ -2908,7 +2874,7 @@ public class THDWorker {
                     
                 case "nl":
                     
-                    String uriNl = "http://nl.dbpedia.org/resource/"+URLEncoder.encode(entityTitle.replace(" ", "_"),"UTF-8");
+                    String uriNl = "http://nl.dbpedia.org/resource/"+entityTitle.replace(" ", "_");
                     queryObj.append("uri", uriNl);
                     DBCursor cursorNL = MongoDBClient.getDBInstance().getCollection("nl_entities_dbpedia").find(queryObj);
                     
@@ -2927,11 +2893,10 @@ public class THDWorker {
                                 hypernym.setType(obj.get("label").toString());
                                 hypernym.setTypeURL(obj.get("uri").toString());
                                 hypernym.setOrigin("dbpedia");
-                                //System.out.println("TEST: " + obj.get("uri").toString());
+                                hypernym.setAccuracy("-1.0");
                                 
                                 if(obj.get("uri").toString().contains("http://dbpedia.org/ontology/")){
                                     hypernymsList.add(hypernym);
-                                    //System.out.println("DBpedia ontology");
                                 }
                             }
                         }
@@ -2941,7 +2906,6 @@ public class THDWorker {
                     return hypernymsList;
                     
                 default:
-                    //System.out.println("Not supported language!");
                     return hypernymsList;
             }
         } catch (UnsupportedEncodingException ex) {
@@ -2958,44 +2922,26 @@ public class THDWorker {
         switch(lang){
 
             case "en":
-
-//                queryObj.append("labels.label", entityTitle).append("labels.lang", "en");
                 queryObj.append("uri", "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_")).append("labels.lang", "en");
-//                queryObj.append("uri", "http://dbpedia.org/resource/"+entityTitle.replaceAll(" ", "_")).append("labels.lang", "en");
-                
                 DBObject resObj = MongoDBClient.getDBInstance().getCollection("entities_yago").findOne(queryObj);
                 
                 if(resObj != null) {
-                    
-                    //System.out.println("before " + hypernymsList.size());
-//                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "yago"));
                     hypernymsList = YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "yago");
-                    //System.out.println("after " + hypernymsList.size());
                 }
                 return hypernymsList;
-//                break;
                 
             case "de":
-                
                 queryObj = new BasicDBObject();
                 queryObj.append("uri", "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_")).append("labels.lang", "de");
-//                queryObj.append("labels.label", entityTitle).append("labels.lang", "de");
-//                queryObj.append("uri", "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"));
                 
                 resObj = MongoDBClient.getDBInstance().getCollection("entities_yago").findOne(queryObj);
                 
                 if(resObj != null){
-                    
-                    //System.out.println("before " + hypernymsList.size());
-//                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, resObj.get("uri").toString(), "de", "yago"));
                     hypernymsList = YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, resObj.get("uri").toString(), "de", "yago");
-                    //System.out.println("after " + hypernymsList.size());
                 }
                 return hypernymsList;
-//                break;
                 
             case "nl":
-                
                 break;
         }
         return hypernymsList;
@@ -3008,10 +2954,8 @@ public class THDWorker {
         DBObject resObj2 = MongoDBClient.getDBInstance().getCollection("test_en_entities_superclass").findOne(queryObj2);
         
         if(resObj2 != null){
-            //System.out.println(resObj);
             BasicDBList e = (BasicDBList)resObj2.get("types");
             DBObject type = (DBObject)e.get(0);
-            //System.out.println("Superclass for "+ res + " is " + type.get("label"));
             
             DBpediaMapping result = new DBpediaMapping();
             result.setLabel(type.get("label").toString());
@@ -3025,7 +2969,6 @@ public class THDWorker {
     
     public String getSuperclass(String uri, String lang) throws UnknownHostException{
         
-        //System.out.println("Searching superclass for " + uri);
         BasicDBObject tempQueryObj = new BasicDBObject();
         tempQueryObj.append("uri", uri);
         tempQueryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
@@ -3048,38 +2991,22 @@ public class THDWorker {
         
     }
     public ArrayList<Hypernym> removeDuplicates(List<Hypernym> l) {
-//        System.out.println("STARTED: " + l.size());
         Set<Hypernym> s = new TreeSet<Hypernym>(new Comparator<Hypernym>() {
 
             @Override
             public int compare(Hypernym o1, Hypernym o2) {
-//                System.out.println(o1.getEntity());
-//                System.out.println(o2.getEntity());
-//                System.out.println(o1.getEntityURL());
-//                System.out.println(o2.getEntityURL());
-//                System.out.println(o1.getType());
-//                System.out.println(o2.getType());
-//                System.out.println(o1.getTypeURL());
-//                System.out.println(o2.getTypeURL());
                 if(
-//                        o1.getEntity().equals(o2.getEntity()) &&
                         o1.getEntityURL().equals(o2.getEntityURL()) &&
                         o1.getOrigin().equals(o2.getOrigin()) &&
-//                        o1.getType().equals(o2.getType()) &&
                         o1.getTypeURL().equals(o2.getTypeURL())
                 ) {
-//                    System.out.println("0");
                     return 0;
                 } else {
-//                    System.out.println("-1");
                     return -1;
                 }
             }
         });
-        
         s.addAll(l);
-        
-//        System.out.println("END: " + s.size());
         return new ArrayList<Hypernym>(s);
    }
 }
