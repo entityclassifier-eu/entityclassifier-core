@@ -22,17 +22,12 @@
 package cz.vse.fis.keg.entityclassifier.core;
 
 import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
-import cz.vse.fis.keg.entityclassifier.core.conf.PropertiesLoader;
-import cz.vse.fis.keg.entityclassifier.core.ontologymapper.DBpediaOntologyManager;
-import cz.vse.fis.keg.entityclassifier.core.ontologymapper.TypeMapper;
-import cz.vse.fis.keg.entityclassifier.core.ontologymapper.YagoOntologyManager;
 import gate.CreoleRegister;
 import gate.Gate;
 import gate.util.GateException;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -59,7 +54,7 @@ public class THDController {
         
         if(!poolInitialized) {
             Logger.getLogger(THDController.class.getName()).log(Level.INFO, "========= Initializing THD =========");            
-            loadSettings();
+            Settings.getInstance();
             initGATE();
             initPool();
             poolInitialized = true;
@@ -71,91 +66,37 @@ public class THDController {
         pool = new LinkedBlockingQueue<THDWorker>();
         for(int i = 0; i < Settings.POOL_SIZE; i++) {
             pool.add(new THDWorker());
-            Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned Entityclassifier.eu instance #" + pool.size());
+            Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned Entityclassifier.eu worker instance #" + pool.size());
         }
-        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned " + Settings.POOL_SIZE + " Entityclassifier.eu instance.");
-    }
-
-    private void loadSettings() {
-        System.out.println("Loading configuration file ...");
-        Properties prop = new PropertiesLoader().getProperties();
-        readSettings(prop);        
-    }
-    
-    private void readSettings(Properties prop) {
-        
-        Settings.GATE_HOME = prop.getProperty("gateHome");
-        Settings.PLUGINS_HOME = prop.getProperty("pluginHome");
-        
-        Settings.POOL_SIZE = Integer.parseInt(prop.getProperty("workerPoolSize"));
-        
-        Settings.EN_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("enEntityExtractionGrammar");
-        Settings.NL_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("nlEntityExtractionGrammar");
-        Settings.DE_ENTITY_EXTRACTION_GRAMMAR = prop.getProperty("deEntityExtractionGrammar");
-
-        Settings.EN_HYPERNYM_EXTRACTION_GRAMMAR = prop.getProperty("enHypernymExtractionGrammar");
-        Settings.DE_HYPERNYM_EXTRACTION_GRAMMAR = prop.getProperty("deHypernymExtractionGrammar");
-        Settings.NL_HYPERNYM_EXTRACTION_GRAMMAR = prop.getProperty("nlHypernymExtractionGrammar");
-        
-        Settings.NL_TAGGER_BINARY = prop.getProperty("nlTaggerBinary");
-        Settings.DE_TAGGER_BINARY = prop.getProperty("deTaggerBinary");
-        
-        Settings.EN_WIKIPEDIA_LOCAL_EXPORT = prop.getProperty("en_wikipedia_local_export");
-        Settings.DE_WIKIPEDIA_LOCAL_EXPORT = prop.getProperty("de_wikipedia_local_export");
-        Settings.NL_WIKIPEDIA_LOCAL_EXPORT = prop.getProperty("nl_wikipedia_local_export");
-        
-        Settings.EN_WIKIPEDIA_LIVE_EXPORT = prop.getProperty("en_wikipedia_live_export");
-        Settings.DE_WIKIPEDIA_LIVE_EXPORT = prop.getProperty("de_wikipedia_live_export");
-        Settings.NL_WIKIPEDIA_LIVE_EXPORT = prop.getProperty("nl_wikipedia_live_export");
-        
-        Settings.EN_WIKIPEDIA_LOCAL_API = prop.getProperty("en_wikipedia_local_api");
-        Settings.DE_WIKIPEDIA_LOCAL_API = prop.getProperty("de_wikipedia_local_api");
-        Settings.NL_WIKIPEDIA_LOCAL_API = prop.getProperty("nl_wikipedia_local_api");
-        
-        Settings.EN_WIKIPEDIA_LIVE_API = prop.getProperty("en_wikipedia_live_api");
-        Settings.DE_WIKIPEDIA_LIVE_API = prop.getProperty("de_wikipedia_live_api");
-        Settings.NL_WIKIPEDIA_LIVE_API = prop.getProperty("nl_wikipedia_live_api");
-        
-        Settings.EN_LUCENE = prop.getProperty("ENLuceneURL");
-        Settings.DE_LUCENE = prop.getProperty("DELuceneURL");
-        Settings.NL_LUCENE = prop.getProperty("NLLuceneURL");
-        
-        Settings.SALIENCE_DATASET = prop.getProperty("salience_dataset");
-        
-        Settings.EN_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("en_dbpedia_disambiguation_dataset");
-        Settings.DE_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("de_dbpedia_disambiguation_dataset");
-        Settings.NL_DBPEDIA_DISAMBIGUATION_DATASET = prop.getProperty("nl_dbpedia_disambiguation_dataset");
-        
-        Settings.SEMITAGS_SPOTTING_ENDPOINT = prop.getProperty("semitags_spotting_endpoint");
-        Settings.SEMITAGS_LINKING_ENDPOINT = prop.getProperty("semitags_linking_endpoint");
-        
-        DBpediaOntologyManager.setDbpediaOntologyFileLocation(prop.getProperty("dbpediaOntologyFileLocation"));
-        YagoOntologyManager.setYagoOntologyFileLocation(prop.getProperty("yagoOntologyFileLocation"));
-
-        TypeMapper.setEn_inferred_mappings(prop.getProperty("en_inferred_mappings"));
-        TypeMapper.setDe_inferred_mappings(prop.getProperty("de_inferred_mappings"));
-        TypeMapper.setNl_inferred_mappings(prop.getProperty("nl_inferred_mappings"));
-
-        TypeMapper.getInstance().init();
-
-        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Configuration file successfully loaded.");            
+        Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Spawned " + Settings.POOL_SIZE + " Entityclassifier.eu worker instances.");
     }
 
     private void initGATE() throws MalformedURLException, GateException {
-        
+        System.out.println("here 111111");
         File gateHomeFile = new File(Settings.GATE_HOME);
+        System.out.println("here 111");
         Gate.setGateHome(gateHomeFile);
+        System.out.println("here 11");
         File pluginsHome = new File(Settings.PLUGINS_HOME);
+        System.out.println("here 2");
         Gate.setPluginsHome(pluginsHome);
+        System.out.println("here 3");
         Gate.setUserConfigFile(new File(Settings.GATE_HOME, "user-gate.xml"));
+        System.out.println("here 4");
         URL annieHome = null;
         URL taggerHome = null;
         annieHome = new File(pluginsHome, "ANNIE").toURL();
+        System.out.println("here 5");
         taggerHome = new File(pluginsHome, "Tagger_Framework").toURL();
+        System.out.println("here 6");
         Gate.init();
+        System.out.println("here 7");
         CreoleRegister register = Gate.getCreoleRegister();
+        System.out.println("here 8");
         register.registerDirectories(annieHome);
+        System.out.println("here 9");
         register.registerDirectories(taggerHome);
+        System.out.println("here 10");
         Logger.getLogger(THDController.class.getName()).log(Level.INFO, "Entityclassifier.eu was initialized successfully.");            
     }
 

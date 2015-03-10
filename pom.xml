@@ -4,9 +4,9 @@
 
   <groupId>cz.vse.entityclassifier</groupId>
   <artifactId>entityclassifier-core</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>3.9.2</version>
   <packaging>jar</packaging>
-    
+      
 <!--  <repositories>
     <repository>
       <id>apache-repo-snap</id>
@@ -44,7 +44,7 @@
                        <canUpdateCopyright>true</canUpdateCopyright>
                        <canUpdateDescription>true</canUpdateDescription>
                        <canUpdateLicense>true</canUpdateLicense>
-                       <excludes>
+<!--                       <excludes>
                            <exclude>**/README</exclude>
                            <exclude>*.log</exclude>
                            <exclude>*.html</exclude>
@@ -56,7 +56,11 @@
                            <exclude>src/main/properties/**</exclude>
                            <exclude>src/main/webapp/**</exclude>
                            <exclude>src/test/resources/**</exclude>
-                       </excludes>
+                       </excludes>-->
+                       <includes>
+                           <include>main/java/**</include>
+                           <include>main/resources/**</include>
+                       </includes>
                    </configuration>
                </plugin>
             </plugins>

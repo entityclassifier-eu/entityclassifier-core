@@ -23,6 +23,7 @@ package cz.vse.fis.keg.entityclassifier.core.mongodb;
 
 import com.mongodb.DB;
 import com.mongodb.MongoClient;
+import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
 import java.net.UnknownHostException;
 
 /**
@@ -35,11 +36,11 @@ public class MongoDBClient {
         
     private static MongoClient   mongoClient = null;
     private static DB            db          = null;
-            
+
     public static DB getDBInstance() throws UnknownHostException{
         if(db == null){
             init();
-            db = mongoClient.getDB( "thddb" );
+            db = mongoClient.getDB( Settings.MONGODB_DATABASE_NAME );
         }
         return db;
     }
@@ -47,12 +48,15 @@ public class MongoDBClient {
     public static MongoClient getClient() throws UnknownHostException{
         if(db == null){
             init();
-            db = mongoClient.getDB( "thddb" );
+            db = mongoClient.getDB( Settings.MONGODB_DATABASE_NAME );
         }
         return mongoClient;
     }
 
     public static void init() throws UnknownHostException {
-        mongoClient = new MongoClient( "localhost" , 27017 );
+//        new Settings().init();
+        Settings.getInstance();
+        mongoClient = new MongoClient( Settings.MONGODB_URL , Settings.MONGODB_PORT );
+        System.out.println("mongoDB was sucessfully configured.");
     }
 }

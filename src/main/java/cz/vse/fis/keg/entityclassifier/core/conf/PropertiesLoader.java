@@ -35,17 +35,16 @@ import java.util.logging.Logger;
  */
 public class PropertiesLoader {
     
-    public Properties getProperties() {
-        
+    private static final String DEFAULT_THD_PROPERTIES_FILE_LOCATION = "/resources/settings.ini";
+//    private static final String DEFAULT_THD_PROPERTIES_FILE_LOCATION = "/resources/settings.ini-tmp";
+//    private static final String DEFAULT_THD_PROPERTIES_FILE_LOCATION = "/resources/settings.ini-try";
+    
+    public Properties getProperties() {        
         try {
-            
             Properties prop = new Properties();
-            URL url =  this.getClass().getResource("/resources/settings-prod.ini");
-//            URL url =  this.getClass().getResource("/resources/settings-dev.ini");
-//            URL url =  this.getClass().getResource("/resources/settings-ner-dev.ini");
+            URL url =  this.getClass().getResource(DEFAULT_THD_PROPERTIES_FILE_LOCATION);
             prop.load(new FileInputStream(new File(url.getFile())));
             return prop;
-        
         } catch (IOException ex) {
             Logger.getLogger(PropertiesLoader.class.getName()).log(Level.INFO, ex.toString());
         }

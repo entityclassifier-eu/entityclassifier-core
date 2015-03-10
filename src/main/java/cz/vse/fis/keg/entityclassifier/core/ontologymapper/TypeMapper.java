@@ -101,22 +101,28 @@ public class TypeMapper {
     
     public void init() {
         try {
-            
+            System.out.println(en_inferred_mappings);
+            System.out.println(de_inferred_mappings);
+            System.out.println(nl_inferred_mappings);
+        System.out.println("started loading EN infered ");
             enModel = ModelFactory.createDefaultModel();
             InputStream inEn = FileManager.get().open( en_inferred_mappings );
             enModel.read(inEn, null, "N-TRIPLE");
+            inEn.close();
             
+        System.out.println("started loading DE infered ");
             deModel = ModelFactory.createDefaultModel();
             InputStream inDe = FileManager.get().open( de_inferred_mappings );
             deModel.read(inDe, null, "N-TRIPLE");
+            inDe.close();
             
+        System.out.println("started loading NL infered ");
             nlModel = ModelFactory.createDefaultModel();
             InputStream inNl = FileManager.get().open( nl_inferred_mappings );
             nlModel.read(inNl, null, "N-TRIPLE");
-            
-            inEn.close();
-            inDe.close();
+        System.out.println("end ...");
             inNl.close();
+            
             
         } catch (IOException ex) {
             Logger.getLogger(TypeMapper.class.getName()).log(Level.SEVERE, null, ex);

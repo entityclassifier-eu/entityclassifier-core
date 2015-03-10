@@ -21,6 +21,7 @@
  */
 package cz.vse.fis.keg.entityclassifier.core.redis;
 
+import cz.vse.fis.keg.entityclassifier.core.conf.Settings;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import redis.clients.jedis.Jedis;
@@ -37,8 +38,9 @@ public class RedisClient {
     private static JedisPool jedisPool = null;    
     
     public static RedisClient getInstance() {
-        if(client == null ){
+        if(client == null ) {
             client = new RedisClient();
+            Settings.getInstance();
             configure();
         }
         return client;        
@@ -65,8 +67,9 @@ public class RedisClient {
         jedisPoolConfig.setTimeBetweenEvictionRunsMillis(60000);  
         /*maximum time in milliseconds to wait when the exhaust action is set to block*/  
         jedisPoolConfig.setMaxWaitMillis(3000);
-//        jedisPoolConfig.setMaxWait(3000);  
-        jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
+//        jedisPoolConfig.setMaxWait(3000);
+//        jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
+        jedisPool = new JedisPool(jedisPoolConfig, Settings.REDIS_URL, Settings.REDIS_PORT);
         System.out.println("Redis was sucessfully configured.");
     }
 

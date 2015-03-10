@@ -114,7 +114,7 @@ public class THDWorker {
         ArrayList<Entity> resultEntities = new ArrayList<Entity>();        
         ArrayList<Entity> extractedEntities = new ArrayList<Entity>();
 
-        extractedEntities = extractEntityCandidates(query, lang, entity_type, spottingMethod);
+        extractedEntities = extractEntityMentions(query, lang, entity_type, spottingMethod);
         
         System.out.println("Extracted candidates: " + extractedEntities.size());
         RedisClient redis = RedisClient.getInstance();
@@ -146,7 +146,7 @@ public class THDWorker {
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticleSkipDisambiguationPage(entityString, lang, "local");
                         } else if(linkingMethod.equals("SFISearch")) {
                             linkedEntity = SFISearch.getInstance().findWikipediaArticle(entityString, lang);
-                        }else if(linkingMethod.equals("WikipediaSearch")) {
+                        } else if(linkingMethod.equals("WikipediaSearch")) {
                             if(tmpPar.equals("irapi")) {
                                 linkedEntity = WikipediaSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
                             } else {
@@ -156,15 +156,14 @@ public class THDWorker {
                         }
                         if(linkedEntity != null) {
                             redis.setKey(entityString + lang + "linkedHypernymsDataset"+linkingMethod, linkedEntity.toString());
-                        }
-                        
+                        }                      
                     } else {
                         // Linked entity found in cache.
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
                         linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
                     }
-                }else if(knowledge_base.equals("live")) {
+                } else if(knowledge_base.equals("live")) {
                     
                     String linkedEntityStr = redis.getValue(entityString + lang + "live");
                     
@@ -184,8 +183,7 @@ public class THDWorker {
                 } else if(knowledge_base.equals("local")){
                     String linkedEntityStr = redis.getValue(entityString + lang + "local"+linkingMethod);
 
-                    if(linkedEntityStr == null) {
-                        
+                    if(linkedEntityStr == null) {                        
                         if(linkingMethod.equals("LuceneSearch")) {
                             linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
                         } else if(linkingMethod.equals("LuceneSearchSkipDisPage")) {
@@ -198,11 +196,10 @@ public class THDWorker {
                             linkedEntity = SurfaceFormSimilarity.getInstance().findWikipediaArticle(entityString, lang,"local");
                         } else {
                         }
-                        
                         if(linkedEntity != null) {
                             redis.setKey(entityString + lang + "local"+linkingMethod, linkedEntity.toString());
                         }
-                    }else {
+                    } else {
                         // Linked entity found in cache.
                         linkedEntity = new LinkedEntity();
                         linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
@@ -274,7 +271,6 @@ public class THDWorker {
                     }
                         
                     if (hypernymsList.size() > 0) {
-                        // TYPES FOUND
                         // found types, ending linking
                         foundEntity = new Entity();
                         foundEntity.setUnderlyingString(e.getUnderlyingString());
@@ -314,7 +310,6 @@ public class THDWorker {
                         
                         foundEntity.setTypes(entityTypes);
                         resultEntities.add(foundEntity);
-                        
                         continueLinking = false;
                     } else {
                         
@@ -602,353 +597,354 @@ public class THDWorker {
             return resultEntities;
         }
         return resultEntities;
-    }    
-    public ArrayList<Hypernym> processText_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
-        try {
-        ArrayList<Entity> extractedEntities = new ArrayList<Entity>();
-
-        extractedEntities = extractEntityCandidates(query, lang, entity_type, "");
-        System.out.println("Extracted candidates: " + extractedEntities.size());
-        HashSet<Hypernym> resHypList = new HashSet();
-        RedisClient redis = RedisClient.getInstance();
-        for(Entity e : extractedEntities){
-            String entityString = e.getUnderlyingString().trim();
-                LinkedEntity linkedEntity = null;
-                boolean continueLinking = true;
-                String longestEntityPage = null;
-                String[] words = null;
-                
-                while(continueLinking) {
-                    
-                    if(knowledge_base.equals("linkedHypernymsDataset")){
-                        String linkedEntityStr = redis.getValue(entityString + lang + "linkedHypernymsDataset");
-                        if(linkedEntityStr == null) {
-                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
-                            if(linkedEntity != null){
-                                redis.setKey(entityString + lang + "linkedHypernymsDataset", linkedEntity.toString());
-                            }
-                        } else {
-                            linkedEntity = new LinkedEntity();
-                            linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
-                            linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-                        }
-                    }else if(knowledge_base.equals("live")) {
-                        String linkedEntityStr = redis.getValue(entityString + lang + "live");
-                        if(linkedEntityStr == null) {
-                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
-                            if(linkedEntityStr != null) {                                
-                                redis.setKey(entityString + lang + "local", linkedEntity.toString());
-                            }
-                        }
-                    } else if(knowledge_base.equals("local")) {
-                        String linkedEntityStr = redis.getValue(entityString + lang + "local");
-                        if(linkedEntityStr == null) {
-                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
-                            if(linkedEntityStr != null){
-                                redis.setKey(entityString + lang + "local", linkedEntity.toString());
-                            }
-                        } else {
-                            linkedEntity = new LinkedEntity();
-                            linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
-                            linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
-                        }
-                    }
-
-                    // ENTITY NOT MAPPED TO DBpedia
-                    if ( linkedEntity == null ) {
-                        words = entityString.split("\\s+");
-                        if(words.length > 1) {
-                            entityString = entityString.split("\\s+", 2)[1];
-                            // nothing, try to link again with shorter text
-                        } else {
-                            // ENTITY LINKED or CANNOT be LINKED
-                            if(priorityEntityLinking) {
-                                // priority linked
-                                Hypernym h = new Hypernym();
-                                h.setAccuracy("-1");
-                                h.setBounds("-1");
-                                h.setStartOffset(e.getStartOffset());
-                                h.setEndOffset(e.getEndOffset());
-                                h.setOrigin("thd");
-                                h.setType("");
-                                h.setTypeURL("");
-                                h.setEntityURL("");
-                                h.setEntity(e.getUnderlyingString());
-                                h.setUnderlyingEntityText(e.getUnderlyingString());
-                                resHypList.add(h);
-                                
-                            } else {
-                                // no priority linking
-                                Hypernym h = new Hypernym();
-                                h.setAccuracy("-1");
-                                h.setBounds("-1");
-                                h.setStartOffset(e.getStartOffset());
-                                h.setEndOffset(e.getEndOffset());
-                                h.setOrigin("thd");
-                                h.setType("");
-                                h.setTypeURL("");
-                                h.setUnderlyingEntityText(e.getUnderlyingString());
-                                
-                                if(longestEntityPage != null){
-                                    h.setEntity(longestEntityPage);
-                                    switch(lang){
-                                        case "en":
-                                            h.setEntityURL("http://dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                            break;
-
-                                        case "de":
-                                            h.setEntityURL("http://de.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                            break;
-
-                                        case "nl":
-                                            h.setEntityURL("http://nl.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                            break;
-                                    }
-                                }else{
-                                    h.setEntity("");
-                                    h.setEntityURL("");                                
-                                }
-                                resHypList.add(h);                            
-                            }
-                            continueLinking = false;
-                        }
-                    } else {
-                        // entity mapped, checking types
-                        HashSet<Hypernym> hypernymsList = null;
-                    
-                        if (knowledge_base.equals("live")) {
-                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "live", provenance);                    
-                        } else if (knowledge_base.equals("local")) {                    
-                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "local", provenance);                    
-                        } else if (knowledge_base.equals("linkedHypernymsDataset")) {
-                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "linkedHypernymsDataset", provenance);
-                        }
-                        
-                        if (hypernymsList.size() > 0) {
-                            // TYPES FOUND
-                            // found types, ending linking
-                            continueLinking = false;
-                            for(Hypernym h : hypernymsList) {
-                                h.setUnderlyingEntityText(e.getUnderlyingString());
-                                h.setStartOffset(e.getStartOffset());
-                                h.setEndOffset(e.getEndOffset());
-                                resHypList.add(h);
-                            }
-                        } else {
-                            // NO TYPES
-                            // if priority, then end, otherwise continue
-                            if(priorityEntityLinking) {
-                                // PRIORITY ON
-                                // priority linking
-                                Hypernym h = new Hypernym();
-                                h.setAccuracy("-1");
-                                h.setBounds("-1");
-                                h.setStartOffset(e.getStartOffset());
-                                h.setEndOffset(e.getEndOffset());
-                                h.setOrigin("thd");
-                                h.setType("");
-                                h.setTypeURL("");
-                                h.setEntity(linkedEntity.getPageTitle());
-                                h.setUnderlyingEntityText(e.getUnderlyingString());
-                                
-                                switch(lang) {
-                                        case "en":
-                                            h.setEntityURL("http://dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                            break;
-
-                                        case "de":
-                                            h.setEntityURL("http://de.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                            break;
-
-                                        case "nl":
-                                            h.setEntityURL("http://nl.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                            break;
-                                    }
-                                resHypList.add(h);
-                                continueLinking = false;
-                            } else {
-                                // PRIORITY OFF, NO TYPES found
-                                // no priority linking continue to search
-                                words = entityString.split("\\s+");
-                                if(words.length > 1) {
-                                    // PRIORITY OFF, MORE SEARCHING
-                                    entityString = entityString.split("\\s+", 2)[1];
-                                    if(longestEntityPage == null){
-                                        longestEntityPage = linkedEntity.getPageTitle();
-                                    }
-                                } else {
-                                    // PRIORITY OFF, NO MORE SEARCH
-                                    Hypernym h = new Hypernym();
-                                    h.setAccuracy("-1");
-                                    h.setBounds("-1");
-                                    h.setStartOffset(e.getStartOffset());
-                                    h.setEndOffset(e.getEndOffset());
-                                    h.setOrigin("thd");
-                                    h.setType("");
-                                    h.setTypeURL("");                                    
-                                    h.setUnderlyingEntityText(e.getUnderlyingString());
-                                    if(longestEntityPage != null) {
-                                        h.setEntity(longestEntityPage);
-                                        switch(lang){
-                                            case "en":
-                                                h.setEntityURL("http://dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                                break;
-
-                                            case "de":
-                                                h.setEntityURL("http://de.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                                break;
-
-                                            case "nl":
-                                                h.setEntityURL("http://nl.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
-                                                break;
-                                        }
-                                    }else{
-                                        h.setEntity(linkedEntity.getPageTitle());
-                                        switch(lang){
-                                            case "en":
-                                                h.setEntityURL("http://dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                                break;
-
-                                            case "de":
-                                                h.setEntityURL("http://de.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                                break;
-
-                                            case "nl":
-                                                h.setEntityURL("http://nl.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
-                                                break;
-                                        }
-                                    }
-                                    resHypList.add(h);
-                                    continueLinking = false;
-                                }
-                            }
-                        }
-                    }
-
-                    // Align the DE/NL enity URIs with EN URI
-                    switch(lang){
-                        case "de":
-                            // Spawning one more entity with just another localized URI
-                            HashSet<Hypernym> resHypListEnde = new HashSet();
-                            for(Hypernym h : resHypList) {
-                                if(h.getEntityURL().startsWith("http://de.dbpedia.org/resource/")
-                                        && (h.getOrigin().equals("thd")
-                                        || h.getOrigin().equals("thd-derived")
-                                        )){
-                                    
-                                    BasicDBObject queryObj = new BasicDBObject();
-                                    queryObj.append("de_uri",h.getEntityURL());
-                                    BasicDBObject projObj = new BasicDBObject();
-                                    projObj.append("en_uri", 1);
-                                    
-                                    DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
-                                    
-                                    if(resObj != null) {
-                                        
-                                        if(resObj.get("en_uri") != null) {
-                                            String enInterLangLink = resObj.get("en_uri").toString();
-                                            Hypernym h2 = new Hypernym();
-                                            h2.setType(h.getType());
-                                            h2.setTypeURL(h.getTypeURL());
-                                            h2.setEntity(enInterLangLink.split("/")[enInterLangLink.split("/").length-1].replace("_", " "));
-                                            h2.setEntityURL(enInterLangLink);
-                                            h2.setAccuracy(h.getAccuracy());
-                                            h2.setBounds(h.getBounds());
-                                            h2.setStartOffset(h.getStartOffset());
-                                            h2.setEndOffset(h.getEndOffset());
-                                            h2.setOrigin("thd");
-                                            h2.setUnderlyingEntityText(h.getUnderlyingEntityText());
-                                            resHypListEnde.add(h2);
-                                        }
-                                        
-                                    }
-                                }
-                            }
-                            resHypList.addAll(resHypListEnde);
-                            break;
-                            
-                        case "nl":
-                            
-                            HashSet<Hypernym> resHypListEnNl = new HashSet();
-                            
-                            // Spawning one more entity with just another localized URI
-                            for(Hypernym h : resHypList){
-                                if(h.getEntityURL().startsWith("http://nl.dbpedia.org/resource/")
-                                        && (h.getOrigin().equals("thd")
-                                        || h.getOrigin().equals("thd-derived")
-                                        )) {
-                                    
-                                    BasicDBObject queryObj = new BasicDBObject();
-                                    queryObj.append("nl_uri", h.getEntityURL());
-                                    BasicDBObject projObj = new BasicDBObject();
-                                    projObj.append("en_uri", 1);
-                                    
-                                    DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
-
-                                    if(resObj != null) {
-                                        
-                                        if(resObj.get("en_uri") != null) {
-                                            
-                                            String enInterLangLink = resObj.get("en_uri").toString();
-
-                                            Hypernym h2 = new Hypernym();
-                                            h2.setType(h.getType());
-                                            h2.setTypeURL(h.getTypeURL());
-                                            h2.setEntity(enInterLangLink.split("/")[enInterLangLink.split("/").length-1].replace("_", " "));
-                                            h2.setEntityURL(enInterLangLink);
-                                            h2.setAccuracy(h.getAccuracy());
-                                            h2.setBounds(h.getBounds());
-                                            h2.setStartOffset(h.getStartOffset());
-                                            h2.setEndOffset(h.getEndOffset());
-                                            h2.setOrigin("thd");
-                                            h2.setUnderlyingEntityText(h.getUnderlyingEntityText());
-
-                                            resHypListEnNl.add(h2);
-                                        }
-                                    }
-                                }
-                            }
-                            resHypList.addAll(resHypListEnNl);
-
-                            break;
-                        }                    
-                }
-        }
-        
-        // filtering out types
-        if(typesFilter.equals("dbo")) {
-            
-            HashSet dboHypList = new HashSet();
-            for(Hypernym h  : resHypList){
-                if(h.getTypeURL().contains("ontology")) {
-                    dboHypList.add(h);
-                }                
-            }
-            resHypList = dboHypList;
-            
-        } else if(typesFilter.equals("dbinstance")){
-            
-            HashSet dbinstanceHypList = new HashSet();
-            for(Hypernym h  : resHypList){
-                if(h.getTypeURL().contains("resource")) {
-                    dbinstanceHypList.add(h);
-                }                
-            }
-            resHypList = dbinstanceHypList;
-        
-        } else if(typesFilter.equals("all")){
-            return new ArrayList<Hypernym>(resHypList);
-        }
-        
-        return new ArrayList<Hypernym>(resHypList);
-        
-        } catch(Exception ex){
-            Logger.getLogger(THDWorker.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return null;
     }
     
-    public ArrayList<Entity> extractEntityCandidates(
+//    public ArrayList<Hypernym> processText_MT(String query, String lang, String entity_type, String knowledge_base, String[] provenance, boolean priorityEntityLinking, String typesFilter) throws ResourceInstantiationException, ExecutionException, UnknownHostException {
+//        try {
+//        ArrayList<Entity> extractedEntities = new ArrayList<Entity>();
+//
+//        extractedEntities = extractEntityMentions(query, lang, entity_type, "");
+//        System.out.println("Extracted candidates: " + extractedEntities.size());
+//        HashSet<Hypernym> resHypList = new HashSet();
+//        RedisClient redis = RedisClient.getInstance();
+//        for(Entity e : extractedEntities){
+//            String entityString = e.getUnderlyingString().trim();
+//                LinkedEntity linkedEntity = null;
+//                boolean continueLinking = true;
+//                String longestEntityPage = null;
+//                String[] words = null;
+//                
+//                while(continueLinking) {
+//                    
+//                    if(knowledge_base.equals("linkedHypernymsDataset")){
+//                        String linkedEntityStr = redis.getValue(entityString + lang + "linkedHypernymsDataset");
+//                        if(linkedEntityStr == null) {
+//                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
+//                            if(linkedEntity != null){
+//                                redis.setKey(entityString + lang + "linkedHypernymsDataset", linkedEntity.toString());
+//                            }
+//                        } else {
+//                            linkedEntity = new LinkedEntity();
+//                            linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
+//                            linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
+//                        }
+//                    }else if(knowledge_base.equals("live")) {
+//                        String linkedEntityStr = redis.getValue(entityString + lang + "live");
+//                        if(linkedEntityStr == null) {
+//                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "live");
+//                            if(linkedEntityStr != null) {                                
+//                                redis.setKey(entityString + lang + "local", linkedEntity.toString());
+//                            }
+//                        }
+//                    } else if(knowledge_base.equals("local")) {
+//                        String linkedEntityStr = redis.getValue(entityString + lang + "local");
+//                        if(linkedEntityStr == null) {
+//                            linkedEntity = LuceneSearch.getInstance().findWikipediaArticle(entityString, lang, "local");
+//                            if(linkedEntityStr != null){
+//                                redis.setKey(entityString + lang + "local", linkedEntity.toString());
+//                            }
+//                        } else {
+//                            linkedEntity = new LinkedEntity();
+//                            linkedEntity.setPageTitle(linkedEntityStr.split("\\+")[0]);
+//                            linkedEntity.setConfidence(Double.parseDouble(linkedEntityStr.split("\\+")[1]));
+//                        }
+//                    }
+//
+//                    // ENTITY NOT MAPPED TO DBpedia
+//                    if ( linkedEntity == null ) {
+//                        words = entityString.split("\\s+");
+//                        if(words.length > 1) {
+//                            entityString = entityString.split("\\s+", 2)[1];
+//                            // nothing, try to link again with shorter text
+//                        } else {
+//                            // ENTITY LINKED or CANNOT be LINKED
+//                            if(priorityEntityLinking) {
+//                                // priority linked
+//                                Hypernym h = new Hypernym();
+//                                h.setAccuracy("-1");
+//                                h.setBounds("-1");
+//                                h.setStartOffset(e.getStartOffset());
+//                                h.setEndOffset(e.getEndOffset());
+//                                h.setOrigin("thd");
+//                                h.setType("");
+//                                h.setTypeURL("");
+//                                h.setEntityURL("");
+//                                h.setEntity(e.getUnderlyingString());
+//                                h.setUnderlyingEntityText(e.getUnderlyingString());
+//                                resHypList.add(h);
+//                                
+//                            } else {
+//                                // no priority linking
+//                                Hypernym h = new Hypernym();
+//                                h.setAccuracy("-1");
+//                                h.setBounds("-1");
+//                                h.setStartOffset(e.getStartOffset());
+//                                h.setEndOffset(e.getEndOffset());
+//                                h.setOrigin("thd");
+//                                h.setType("");
+//                                h.setTypeURL("");
+//                                h.setUnderlyingEntityText(e.getUnderlyingString());
+//                                
+//                                if(longestEntityPage != null){
+//                                    h.setEntity(longestEntityPage);
+//                                    switch(lang){
+//                                        case "en":
+//                                            h.setEntityURL("http://dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                            break;
+//
+//                                        case "de":
+//                                            h.setEntityURL("http://de.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                            break;
+//
+//                                        case "nl":
+//                                            h.setEntityURL("http://nl.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                            break;
+//                                    }
+//                                }else{
+//                                    h.setEntity("");
+//                                    h.setEntityURL("");                                
+//                                }
+//                                resHypList.add(h);                            
+//                            }
+//                            continueLinking = false;
+//                        }
+//                    } else {
+//                        // entity mapped, checking types
+//                        HashSet<Hypernym> hypernymsList = null;
+//                    
+//                        if (knowledge_base.equals("live")) {
+//                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "live", provenance);                    
+//                        } else if (knowledge_base.equals("local")) {                    
+//                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "local", provenance);                    
+//                        } else if (knowledge_base.equals("linkedHypernymsDataset")) {
+//                            hypernymsList = extractEntityTypes(linkedEntity.getPageTitle(), lang, "linkedHypernymsDataset", provenance);
+//                        }
+//                        
+//                        if (hypernymsList.size() > 0) {
+//                            // TYPES FOUND
+//                            // found types, ending linking
+//                            continueLinking = false;
+//                            for(Hypernym h : hypernymsList) {
+//                                h.setUnderlyingEntityText(e.getUnderlyingString());
+//                                h.setStartOffset(e.getStartOffset());
+//                                h.setEndOffset(e.getEndOffset());
+//                                resHypList.add(h);
+//                            }
+//                        } else {
+//                            // NO TYPES
+//                            // if priority, then end, otherwise continue
+//                            if(priorityEntityLinking) {
+//                                // PRIORITY ON
+//                                // priority linking
+//                                Hypernym h = new Hypernym();
+//                                h.setAccuracy("-1");
+//                                h.setBounds("-1");
+//                                h.setStartOffset(e.getStartOffset());
+//                                h.setEndOffset(e.getEndOffset());
+//                                h.setOrigin("thd");
+//                                h.setType("");
+//                                h.setTypeURL("");
+//                                h.setEntity(linkedEntity.getPageTitle());
+//                                h.setUnderlyingEntityText(e.getUnderlyingString());
+//                                
+//                                switch(lang) {
+//                                        case "en":
+//                                            h.setEntityURL("http://dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                            break;
+//
+//                                        case "de":
+//                                            h.setEntityURL("http://de.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                            break;
+//
+//                                        case "nl":
+//                                            h.setEntityURL("http://nl.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                            break;
+//                                    }
+//                                resHypList.add(h);
+//                                continueLinking = false;
+//                            } else {
+//                                // PRIORITY OFF, NO TYPES found
+//                                // no priority linking continue to search
+//                                words = entityString.split("\\s+");
+//                                if(words.length > 1) {
+//                                    // PRIORITY OFF, MORE SEARCHING
+//                                    entityString = entityString.split("\\s+", 2)[1];
+//                                    if(longestEntityPage == null){
+//                                        longestEntityPage = linkedEntity.getPageTitle();
+//                                    }
+//                                } else {
+//                                    // PRIORITY OFF, NO MORE SEARCH
+//                                    Hypernym h = new Hypernym();
+//                                    h.setAccuracy("-1");
+//                                    h.setBounds("-1");
+//                                    h.setStartOffset(e.getStartOffset());
+//                                    h.setEndOffset(e.getEndOffset());
+//                                    h.setOrigin("thd");
+//                                    h.setType("");
+//                                    h.setTypeURL("");                                    
+//                                    h.setUnderlyingEntityText(e.getUnderlyingString());
+//                                    if(longestEntityPage != null) {
+//                                        h.setEntity(longestEntityPage);
+//                                        switch(lang){
+//                                            case "en":
+//                                                h.setEntityURL("http://dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                                break;
+//
+//                                            case "de":
+//                                                h.setEntityURL("http://de.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                                break;
+//
+//                                            case "nl":
+//                                                h.setEntityURL("http://nl.dbpedia.org/resource/"+longestEntityPage.replace(" ", "_"));
+//                                                break;
+//                                        }
+//                                    }else{
+//                                        h.setEntity(linkedEntity.getPageTitle());
+//                                        switch(lang){
+//                                            case "en":
+//                                                h.setEntityURL("http://dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                                break;
+//
+//                                            case "de":
+//                                                h.setEntityURL("http://de.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                                break;
+//
+//                                            case "nl":
+//                                                h.setEntityURL("http://nl.dbpedia.org/resource/"+linkedEntity.getPageTitle().replace(" ", "_"));
+//                                                break;
+//                                        }
+//                                    }
+//                                    resHypList.add(h);
+//                                    continueLinking = false;
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    // Align the DE/NL enity URIs with EN URI
+//                    switch(lang){
+//                        case "de":
+//                            // Spawning one more entity with just another localized URI
+//                            HashSet<Hypernym> resHypListEnde = new HashSet();
+//                            for(Hypernym h : resHypList) {
+//                                if(h.getEntityURL().startsWith("http://de.dbpedia.org/resource/")
+//                                        && (h.getOrigin().equals("thd")
+//                                        || h.getOrigin().equals("thd-derived")
+//                                        )){
+//                                    
+//                                    BasicDBObject queryObj = new BasicDBObject();
+//                                    queryObj.append("de_uri",h.getEntityURL());
+//                                    BasicDBObject projObj = new BasicDBObject();
+//                                    projObj.append("en_uri", 1);
+//                                    
+//                                    DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
+//                                    
+//                                    if(resObj != null) {
+//                                        
+//                                        if(resObj.get("en_uri") != null) {
+//                                            String enInterLangLink = resObj.get("en_uri").toString();
+//                                            Hypernym h2 = new Hypernym();
+//                                            h2.setType(h.getType());
+//                                            h2.setTypeURL(h.getTypeURL());
+//                                            h2.setEntity(enInterLangLink.split("/")[enInterLangLink.split("/").length-1].replace("_", " "));
+//                                            h2.setEntityURL(enInterLangLink);
+//                                            h2.setAccuracy(h.getAccuracy());
+//                                            h2.setBounds(h.getBounds());
+//                                            h2.setStartOffset(h.getStartOffset());
+//                                            h2.setEndOffset(h.getEndOffset());
+//                                            h2.setOrigin("thd");
+//                                            h2.setUnderlyingEntityText(h.getUnderlyingEntityText());
+//                                            resHypListEnde.add(h2);
+//                                        }
+//                                        
+//                                    }
+//                                }
+//                            }
+//                            resHypList.addAll(resHypListEnde);
+//                            break;
+//                            
+//                        case "nl":
+//                            
+//                            HashSet<Hypernym> resHypListEnNl = new HashSet();
+//                            
+//                            // Spawning one more entity with just another localized URI
+//                            for(Hypernym h : resHypList){
+//                                if(h.getEntityURL().startsWith("http://nl.dbpedia.org/resource/")
+//                                        && (h.getOrigin().equals("thd")
+//                                        || h.getOrigin().equals("thd-derived")
+//                                        )) {
+//                                    
+//                                    BasicDBObject queryObj = new BasicDBObject();
+//                                    queryObj.append("nl_uri", h.getEntityURL());
+//                                    BasicDBObject projObj = new BasicDBObject();
+//                                    projObj.append("en_uri", 1);
+//                                    
+//                                    DBObject resObj = MongoDBClient.getDBInstance().getCollection("interlanguage_links").findOne(queryObj, projObj);
+//
+//                                    if(resObj != null) {
+//                                        
+//                                        if(resObj.get("en_uri") != null) {
+//                                            
+//                                            String enInterLangLink = resObj.get("en_uri").toString();
+//
+//                                            Hypernym h2 = new Hypernym();
+//                                            h2.setType(h.getType());
+//                                            h2.setTypeURL(h.getTypeURL());
+//                                            h2.setEntity(enInterLangLink.split("/")[enInterLangLink.split("/").length-1].replace("_", " "));
+//                                            h2.setEntityURL(enInterLangLink);
+//                                            h2.setAccuracy(h.getAccuracy());
+//                                            h2.setBounds(h.getBounds());
+//                                            h2.setStartOffset(h.getStartOffset());
+//                                            h2.setEndOffset(h.getEndOffset());
+//                                            h2.setOrigin("thd");
+//                                            h2.setUnderlyingEntityText(h.getUnderlyingEntityText());
+//
+//                                            resHypListEnNl.add(h2);
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                            resHypList.addAll(resHypListEnNl);
+//
+//                            break;
+//                        }                    
+//                }
+//        }
+//        
+//        // filtering out types
+//        if(typesFilter.equals("dbo")) {
+//            
+//            HashSet dboHypList = new HashSet();
+//            for(Hypernym h  : resHypList){
+//                if(h.getTypeURL().contains("ontology")) {
+//                    dboHypList.add(h);
+//                }                
+//            }
+//            resHypList = dboHypList;
+//            
+//        } else if(typesFilter.equals("dbinstance")){
+//            
+//            HashSet dbinstanceHypList = new HashSet();
+//            for(Hypernym h  : resHypList){
+//                if(h.getTypeURL().contains("resource")) {
+//                    dbinstanceHypList.add(h);
+//                }                
+//            }
+//            resHypList = dbinstanceHypList;
+//        
+//        } else if(typesFilter.equals("all")){
+//            return new ArrayList<Hypernym>(resHypList);
+//        }
+//        
+//        return new ArrayList<Hypernym>(resHypList);
+//        
+//        } catch(Exception ex){
+//            Logger.getLogger(THDWorker.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return null;
+//    }
+    
+    public ArrayList<Entity> extractEntityMentions(
             String query, 
             String lang, 
             String entity_type,
@@ -1664,7 +1660,6 @@ public class THDWorker {
                     hypernymsList.add(hypObj);
                 }
             }
-            
         } catch (InvalidOffsetException ex) {
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
@@ -1841,7 +1836,6 @@ public class THDWorker {
                     hypernymsList.add(hypObj);
                 }
             }
-            
         } catch (InvalidOffsetException ex) {
             Logger.getLogger(THDInstance.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
@@ -1874,11 +1868,10 @@ public class THDWorker {
                 }            
             }
         }
-        
         return thdHypernyms;
-    }    
+    }
+    
     public String getInterlanguageLink(String entityTitle, String langOrig, String langTo) {
-        
         try {
             BasicDBObject queryObj = new BasicDBObject();
             switch (langOrig) {
@@ -1942,7 +1935,6 @@ public class THDWorker {
     }
         
     public HashSet getTHDHypernymsLHDv2(String entityTitle, String lang) throws UnknownHostException {
-    
         HashSet hypernymsList = new HashSet();
         try {
             BasicDBObject queryObj = new BasicDBObject();
@@ -2272,534 +2264,535 @@ public class THDWorker {
         }
         return hypernymsList;
     }    
-    public ArrayList<Hypernym> getTHDHypernymsLHD(String entityTitle, String lang) throws UnknownHostException {
+//    public ArrayList<Hypernym> getTHDHypernymsLHD(String entityTitle, String lang) throws UnknownHostException {
+//
+//        ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
+//        BasicDBObject queryObj = new BasicDBObject();
+//        queryObj.append("label", entityTitle);
+//        queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
+//        
+//        switch (lang) {
+//            case "en":
+//                
+//                DBObject resObj = MongoDBClient.getDBInstance().getCollection("en_entities_thd").findOne(queryObj);                
+//                if(resObj != null) {
+//                    
+//                    BasicDBList e = (BasicDBList)resObj.get("types");
+//                    DBObject type = (DBObject)e.get(0);
+//                    
+//                    String mappingStr = type.get("mapping").toString();
+//                    // hypernym is mapped to dbpedia ontology
+//                    // creating hierarchy from the dbpedia ontology
+//                    if(mappingStr.equals("dbOnto")) {
+//                        
+//                        Hypernym hypernym = new Hypernym();
+//                        hypernym.setEntity(entityTitle);
+//                        hypernym.setEntityURL(resObj.get("uri").toString());
+//                        hypernym.setType(type.get("label").toString());
+//                        hypernym.setTypeURL(type.get("uri").toString());
+//                        hypernym.setOrigin(type.get("origin").toString());
+//                        hypernym.setAccuracy(type.get("accuracy").toString());
+//                        hypernym.setBounds(type.get("bounds").toString());
+//                        hypernymsList.add(hypernym);
+//
+//                        OntoRecord initRecord = new OntoRecord();
+//                        initRecord.setUri(type.get("uri").toString());
+//                        
+//                        while(initRecord != null){
+//                            
+//                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//                            if(initRecord == null){
+//                                return hypernymsList;
+//                            } else {
+//                                Hypernym hypernymDerived = new Hypernym();
+//                                hypernymDerived.setEntity(entityTitle);
+//                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                hypernymDerived.setType(initRecord.getLabel());
+//                                hypernymDerived.setTypeURL(initRecord.getUri());
+//                                hypernymDerived.setOrigin("thd-derived");
+//                                hypernymDerived.setAccuracy(type.get("accuracy").toString());
+//                                hypernymDerived.setBounds(type.get("bounds").toString());
+//                                hypernymsList.add(hypernymDerived);
+//                            }
+//                        }
+//                    }
+//                    
+//                    // hypernym is not mapped to dbpedia ontology
+//                    // searching for superclass mapped to dbpedia ontology
+//                    // if found, for the superclass is created hierarchy
+//                    else if(mappingStr.equals("dbRes")){
+//                        
+//                        // try to find mapping
+//                        String mappedRes = DBpediaOntologyMapper.getInstance().mapEnResource(type.get("uri").toString());
+//                        
+//                        if(mappedRes != null) {
+//                            
+//                            Hypernym hypernym2 = new Hypernym();
+//                            hypernym2.setEntity(entityTitle);
+//                            hypernym2.setEntityURL(resObj.get("uri").toString());
+//                            hypernym2.setType(type.get("label").toString());
+//                            hypernym2.setTypeURL(mappedRes);
+//                            hypernym2.setOrigin(type.get("origin").toString());
+//                            hypernym2.setAccuracy(type.get("accuracy").toString());
+//                            hypernym2.setBounds(type.get("bounds").toString());
+//                            hypernymsList.add(hypernym2);
+//                            
+//                            // try to derive some more types
+//                            OntoRecord initRecord = new OntoRecord();
+//                            initRecord.setUri(mappedRes);
+//
+//                            while(initRecord != null){
+//
+//                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//                                if(initRecord == null){
+//                                    return hypernymsList;
+//                                } else {
+//                                    Hypernym hypernymDerived = new Hypernym();
+//                                    hypernymDerived.setEntity(entityTitle);
+//                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                    hypernymDerived.setType(initRecord.getLabel());
+//                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                    hypernymDerived.setOrigin("thd-derived");
+//                                    hypernymDerived.setAccuracy(type.get("accuracy").toString());
+//                                    hypernymDerived.setBounds(type.get("bounds").toString());
+//                                    hypernymsList.add(hypernymDerived);
+//                                }
+//                            }
+//                        } else {
+//                            String initialUri = type.get("uri").toString();
+//
+//                            boolean continueSearching = true;
+//
+//                            while(continueSearching) {
+//                                // try to find dbonto for dbres
+//                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
+//
+//                                // if not found, try to find dbres for the dbres
+//                                if(mapping == null) {
+//
+//                                    initialUri = getSuperclass(initialUri, "en");
+//
+//                                    if(initialUri == null){
+//                                        //System.out.println("No superclass found, finishing searching");
+//                                        continueSearching = false;
+//
+//                                    } else {
+//                                        // superClass uri found
+//                                        // check if uri is dbOnto - create hierarchy
+//                                        // check if uri is dbRes - continue
+//                                        if(initialUri.contains("/resource/")){
+//                                            //System.out.println("Found superclass is dbres");
+//                                            // do nothing
+//                                            // continue to search
+//                                        } else if(initialUri.contains("/ontology/")) {
+//                                            //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
+//                                            // create hierarchy
+//                                            continueSearching = false;
+//
+//                                            OntoRecord initRecord = new OntoRecord();
+//                                            initRecord.setUri(initialUri);
+//
+//                                            while(initRecord != null){
+//
+//                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                                if(initRecord != null){
+//
+//                                                    Hypernym hypernymDerived = new Hypernym();
+//                                                    hypernymDerived.setEntity(entityTitle);
+//                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                                    hypernymDerived.setType(initRecord.getLabel());
+//                                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                                    hypernymDerived.setOrigin("thd-derived");
+//                                                    hypernymDerived.setAccuracy(type.get("accuracy").toString());
+//                                                    hypernymDerived.setBounds(type.get("bounds").toString());
+//                                                    hypernymsList.add(hypernymDerived);
+//                                                }
+//                                            }
+//                                        } else {
+//                                            // some other uri
+//                                            continueSearching = false;
+//                                        }
+//                                    }
+//                                }
+//                                // if found, then create hierarchy
+//                                else {
+//                                    continueSearching = false;
+//                                    // creating hierarchy
+//                                    OntoRecord initRecord = new OntoRecord();
+//                                    initRecord.setUri(initialUri);
+//
+//                                    while(initRecord != null){
+//
+//                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                        if(initRecord != null){
+//
+//                                            Hypernym hypernymDerived = new Hypernym();
+//                                            hypernymDerived.setEntity(entityTitle);
+//                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                            hypernymDerived.setType(initRecord.getLabel());
+//                                            hypernymDerived.setTypeURL(initRecord.getUri());
+//                                            hypernymDerived.setOrigin("thd-derived");
+//                                            hypernymsList.add(hypernymDerived);
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                    return hypernymsList;
+//                    
+//                } else {
+//                    return hypernymsList;
+//                }
+//            case "de":
+//                
+//                resObj = MongoDBClient.getDBInstance().getCollection("de_entities_thd").findOne(queryObj);                
+//                
+//                if(resObj != null){
+//                    
+//                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "de", "thd-derived"));
+//
+//                    BasicDBList typesList = (BasicDBList)resObj.get("types");
+//                    DBObject firstType = (DBObject)typesList.get(0);
+//                    
+//                    String mappingStr = firstType.get("mapping").toString();
+//                    // hypernym is mapped to dbpedia ontology
+//                    // creating hierarchy from the dbpedia ontology
+//                    if(mappingStr.equals("dbOnto")){
+//                        
+//                        Hypernym hypernym = new Hypernym();
+//                        hypernym.setEntity(entityTitle);
+//                        hypernym.setEntityURL(resObj.get("uri").toString());
+//                        hypernym.setType(firstType.get("label").toString());
+//                        hypernym.setTypeURL(firstType.get("uri").toString());
+//                        hypernym.setAccuracy(firstType.get("accuracy").toString());
+//                        hypernym.setBounds(firstType.get("bounds").toString());
+//                        hypernym.setOrigin(firstType.get("origin").toString());
+//                        hypernymsList.add(hypernym);
+//
+//                        OntoRecord initRecord = new OntoRecord();
+//                        initRecord.setUri(firstType.get("uri").toString());
+//                        
+//                        while(initRecord != null){
+//                            
+//                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//                            
+//                            if(initRecord != null){
+//                                
+//                                Hypernym hypernymDerived = new Hypernym();
+//                                hypernymDerived.setEntity(entityTitle);
+//                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                hypernymDerived.setType(initRecord.getLabel());
+//                                hypernymDerived.setTypeURL(initRecord.getUri());
+//                                hypernymDerived.setOrigin("thd-derived");
+//                                hypernymsList.add(hypernymDerived);                                
+//                            }
+//                        }
+//                    }
+//                    // hypernym is not mapped to dbpedia ontology
+//                    // searching for superclass mapped to dbpedia ontology
+//                    // if found, for the superclass is created hierarchy
+//                    else if(mappingStr.equals("dbRes")) {
+//                        
+//                        String mappedRes = DBpediaOntologyMapper.getInstance().mapDeResource(firstType.get("uri").toString());
+//                        
+//                        if(mappedRes != null) {
+//                            
+//                            Hypernym hypernym2 = new Hypernym();
+//                            hypernym2.setEntity(entityTitle);
+//                            hypernym2.setEntityURL(resObj.get("uri").toString());
+//                            hypernym2.setType(firstType.get("label").toString());
+//                            hypernym2.setTypeURL(mappedRes);
+//                            hypernym2.setOrigin(firstType.get("origin").toString());
+//                            hypernym2.setAccuracy(firstType.get("accuracy").toString());
+//                            hypernym2.setBounds(firstType.get("bounds").toString());
+//                            hypernymsList.add(hypernym2);
+//                            
+//                            OntoRecord initRecord = new OntoRecord();
+//                            initRecord.setUri(firstType.get("uri").toString());
+//
+//                            while(initRecord != null){
+//
+//                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                if(initRecord != null){
+//
+//                                    Hypernym hypernymDerived = new Hypernym();
+//                                    hypernymDerived.setEntity(entityTitle);
+//                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                    hypernymDerived.setType(initRecord.getLabel());
+//                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                    hypernymDerived.setOrigin("thd-derived");
+//                                    hypernymsList.add(hypernymDerived);                                
+//                                }
+//                            }
+//                            // try to derive some more types
+//                        } else {
+//                            String initialUri = firstType.get("uri").toString();
+//
+//                            boolean continueSearching = true;
+//
+//                            while(continueSearching){
+//                                // try to find dbonto for dbres
+//                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
+//
+//                                // if not found, try to find dbres for the dbres
+//                                if(mapping == null){
+//
+//                                    initialUri = getSuperclass(initialUri, "de");
+//
+//                                    if(initialUri == null){
+//                                        continueSearching = false;
+//
+//                                    } else {
+//                                        // superClass uri found
+//                                        // check if uri is dbOnto - create hierarchy
+//                                        // check if uri is dbRes - continue
+//
+//                                        if(initialUri.contains("/resource/")){
+//                                            // do nothing
+//                                            // continue to search
+//                                        } else if(initialUri.contains("/ontology/")) {
+//                                            // create hierarchy
+//                                            continueSearching = false;
+//
+//                                            OntoRecord initRecord = new OntoRecord();
+//                                            initRecord.setUri(initialUri);
+//
+//                                            while(initRecord != null){
+//
+//                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                                if(initRecord != null){
+//
+//                                                    Hypernym hypernymDerived = new Hypernym();
+//                                                    hypernymDerived.setEntity(entityTitle);
+//                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                                    hypernymDerived.setType(initRecord.getLabel());
+//                                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                                    hypernymDerived.setOrigin("thd-derived");
+//                                                    hypernymsList.add(hypernymDerived);
+//
+//                                                }
+//                                            }
+//                                        } else {
+//                                            // some other uri
+//                                            continueSearching = false;
+//                                        }
+//                                    }
+//                                }
+//                                // if found, then create hierarchy
+//                                else {
+//                                    continueSearching = false;
+//                                    // creating hierarchy
+//                                    OntoRecord initRecord = new OntoRecord();
+//                                    initRecord.setUri(initialUri);
+//
+//                                    while(initRecord != null){
+//
+//                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                        if(initRecord != null){
+//
+//                                            Hypernym hypernymDerived = new Hypernym();
+//                                            hypernymDerived.setEntity(entityTitle);
+//                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                            hypernymDerived.setType(initRecord.getLabel());
+//                                            hypernymDerived.setTypeURL(initRecord.getUri());
+//                                            hypernymDerived.setOrigin("thd-derived");
+//                                            hypernymsList.add(hypernymDerived);
+//
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                    
+//                    return hypernymsList;
+//                    
+//                } else {
+//                    return hypernymsList;
+//                }
+//                
+//            case "nl":
+//                
+//                resObj = MongoDBClient.getDBInstance().getCollection("nl_entities_thd").findOne(queryObj);                
+//
+//                if(resObj != null){
+//                    
+//                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
+//
+//                    BasicDBList e = (BasicDBList)resObj.get("types");
+//                    DBObject type = (DBObject)e.get(0);
+//                    
+//                    BasicDBList typesList = (BasicDBList)resObj.get("types");
+//                    DBObject firstType = (DBObject)typesList.get(0);
+//                    
+//                    String typeURI = firstType.get("mapping").toString();
+//                    // hypernym is mapped to dbpedia ontology
+//                    // creating hierarchy from the dbpedia ontology
+//                    if(typeURI.equals("dbOnto")){
+//                        
+//                        Hypernym hypernym = new Hypernym();
+//                        hypernym.setEntity(entityTitle);
+//                        hypernym.setEntityURL(resObj.get("uri").toString());
+//                        hypernym.setType(type.get("label").toString());
+//                        hypernym.setTypeURL(type.get("uri").toString());
+//                        hypernym.setAccuracy(type.get("accuracy").toString());
+//                        hypernym.setBounds(type.get("bounds").toString());
+//                        hypernym.setOrigin(type.get("origin").toString());
+//                        hypernymsList.add(hypernym);
+//                    
+//                        OntoRecord initRecord = new OntoRecord();
+//                        initRecord.setUri(firstType.get("uri").toString());
+//                        
+//                        while(initRecord != null){
+//                            
+//                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//                            
+//                            if(initRecord != null){
+//                                
+//                                Hypernym hypernymDerived = new Hypernym();
+//                                hypernymDerived.setEntity(entityTitle);
+//                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                hypernymDerived.setType(initRecord.getLabel());
+//                                hypernymDerived.setTypeURL(initRecord.getUri());
+//                                hypernymDerived.setOrigin("thd-derived");
+//                                hypernymsList.add(hypernymDerived);                                
+//                            }
+//                        }
+//                    }
+//                    // hypernym is not mapped to dbpedia ontology
+//                    // searching for superclass mapped to dbpedia ontology
+//                    // if found, for the superclass is created hierarchy
+//                    else if(typeURI.equals("dbRes")) {
+//
+//                        String mappedRes = DBpediaOntologyMapper.getInstance().mapNlResource(type.get("uri").toString());
+//                        if(mappedRes != null) {
+//                            Hypernym hypernym = new Hypernym();
+//                            hypernym.setEntity(entityTitle);
+//                            hypernym.setEntityURL(resObj.get("uri").toString());
+//                            hypernym.setType(type.get("label").toString());
+//                            hypernym.setTypeURL(mappedRes);
+//                            hypernym.setAccuracy(type.get("accuracy").toString());
+//                            hypernym.setBounds(type.get("bounds").toString());
+//                            hypernym.setOrigin(type.get("origin").toString());
+//                            hypernymsList.add(hypernym);
+//
+//                            OntoRecord initRecord = new OntoRecord();
+//                            initRecord.setUri(mappedRes.toString());
+//
+//                            while(initRecord != null){
+//
+//                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                if(initRecord != null){
+//
+//                                    Hypernym hypernymDerived = new Hypernym();
+//                                    hypernymDerived.setEntity(entityTitle);
+//                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                    hypernymDerived.setType(initRecord.getLabel());
+//                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                    hypernymDerived.setOrigin("thd-derived");
+//                                    hypernymsList.add(hypernymDerived);                                
+//                                }
+//                            }
+//                        } else {
+//                            
+//                            String initialUri = firstType.get("uri").toString();
+//
+//                            boolean continueSearching = true;
+//
+//                            while(continueSearching){
+//                                // try to find dbonto for dbres
+//                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
+//
+//                                // if not found, try to find dbres for the dbres
+//                                if(mapping == null){
+//
+//                                    initialUri = getSuperclass(initialUri, "nl");
+//
+//                                    if(initialUri == null){
+//                                        //System.out.println("No superclass found, finishing searching");
+//                                        continueSearching = false;
+//
+//                                    } else {
+//
+//                                        // superClass uri found
+//                                        // check if uri is dbOnto - create hierarchy
+//                                        // check if uri is dbRes - continue
+//
+//                                        if(initialUri.contains("/resource/")){
+//                                            // do nothing
+//                                            // continue to search
+//                                        } else if(initialUri.contains("/ontology/")) {
+//                                            // create hierarchy
+//                                            continueSearching = false;
+//
+//                                            OntoRecord initRecord = new OntoRecord();
+//                                            initRecord.setUri(initialUri);
+//
+//                                            while(initRecord != null){
+//
+//                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                                if(initRecord != null){
+//
+//                                                    Hypernym hypernymDerived = new Hypernym();
+//                                                    hypernymDerived.setEntity(entityTitle);
+//                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                                    hypernymDerived.setType(initRecord.getLabel());
+//                                                    hypernymDerived.setTypeURL(initRecord.getUri());
+//                                                    hypernymDerived.setOrigin("thd-derived");
+//                                                    hypernymsList.add(hypernymDerived);
+//
+//                                                }
+//                                            }
+//                                        } else {
+//                                            // some other uri
+//                                            continueSearching = false;
+//                                        }
+//                                    }
+//                                }
+//                                // if found, then create hierarchy
+//                                else {
+//                                    continueSearching = false;
+//                                    // creating hierarchy
+//                                    OntoRecord initRecord = new OntoRecord();
+//                                    initRecord.setUri(initialUri);
+//
+//                                    while(initRecord != null){
+//
+//                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
+//
+//                                        if(initRecord != null){
+//
+//                                            Hypernym hypernymDerived = new Hypernym();
+//                                            hypernymDerived.setEntity(entityTitle);
+//                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
+//                                            hypernymDerived.setType(initRecord.getLabel());
+//                                            hypernymDerived.setTypeURL(initRecord.getUri());
+//                                            hypernymDerived.setOrigin("thd-derived");
+//                                            hypernymsList.add(hypernymDerived);
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                    
+//                    return hypernymsList;
+//                    
+//                } else {
+//                    return hypernymsList;
+//                }
+//        }
+//        return null;
+//    }    
 
-        ArrayList<Hypernym> hypernymsList = new ArrayList<Hypernym>();
-        BasicDBObject queryObj = new BasicDBObject();
-        queryObj.append("label", entityTitle);
-        queryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
-        
-        switch (lang) {
-            case "en":
-                
-                DBObject resObj = MongoDBClient.getDBInstance().getCollection("en_entities_thd").findOne(queryObj);                
-                if(resObj != null) {
-                    
-                    BasicDBList e = (BasicDBList)resObj.get("types");
-                    DBObject type = (DBObject)e.get(0);
-                    
-                    String mappingStr = type.get("mapping").toString();
-                    // hypernym is mapped to dbpedia ontology
-                    // creating hierarchy from the dbpedia ontology
-                    if(mappingStr.equals("dbOnto")) {
-                        
-                        Hypernym hypernym = new Hypernym();
-                        hypernym.setEntity(entityTitle);
-                        hypernym.setEntityURL(resObj.get("uri").toString());
-                        hypernym.setType(type.get("label").toString());
-                        hypernym.setTypeURL(type.get("uri").toString());
-                        hypernym.setOrigin(type.get("origin").toString());
-                        hypernym.setAccuracy(type.get("accuracy").toString());
-                        hypernym.setBounds(type.get("bounds").toString());
-                        hypernymsList.add(hypernym);
-
-                        OntoRecord initRecord = new OntoRecord();
-                        initRecord.setUri(type.get("uri").toString());
-                        
-                        while(initRecord != null){
-                            
-                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-                            if(initRecord == null){
-                                return hypernymsList;
-                            } else {
-                                Hypernym hypernymDerived = new Hypernym();
-                                hypernymDerived.setEntity(entityTitle);
-                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                hypernymDerived.setType(initRecord.getLabel());
-                                hypernymDerived.setTypeURL(initRecord.getUri());
-                                hypernymDerived.setOrigin("thd-derived");
-                                hypernymDerived.setAccuracy(type.get("accuracy").toString());
-                                hypernymDerived.setBounds(type.get("bounds").toString());
-                                hypernymsList.add(hypernymDerived);
-                            }
-                        }
-                    }
-                    
-                    // hypernym is not mapped to dbpedia ontology
-                    // searching for superclass mapped to dbpedia ontology
-                    // if found, for the superclass is created hierarchy
-                    else if(mappingStr.equals("dbRes")){
-                        
-                        // try to find mapping
-                        String mappedRes = DBpediaOntologyMapper.getInstance().mapEnResource(type.get("uri").toString());
-                        
-                        if(mappedRes != null) {
-                            
-                            Hypernym hypernym2 = new Hypernym();
-                            hypernym2.setEntity(entityTitle);
-                            hypernym2.setEntityURL(resObj.get("uri").toString());
-                            hypernym2.setType(type.get("label").toString());
-                            hypernym2.setTypeURL(mappedRes);
-                            hypernym2.setOrigin(type.get("origin").toString());
-                            hypernym2.setAccuracy(type.get("accuracy").toString());
-                            hypernym2.setBounds(type.get("bounds").toString());
-                            hypernymsList.add(hypernym2);
-                            
-                            // try to derive some more types
-                            OntoRecord initRecord = new OntoRecord();
-                            initRecord.setUri(mappedRes);
-
-                            while(initRecord != null){
-
-                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-                                if(initRecord == null){
-                                    return hypernymsList;
-                                } else {
-                                    Hypernym hypernymDerived = new Hypernym();
-                                    hypernymDerived.setEntity(entityTitle);
-                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                    hypernymDerived.setType(initRecord.getLabel());
-                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                    hypernymDerived.setOrigin("thd-derived");
-                                    hypernymDerived.setAccuracy(type.get("accuracy").toString());
-                                    hypernymDerived.setBounds(type.get("bounds").toString());
-                                    hypernymsList.add(hypernymDerived);
-                                }
-                            }
-                        } else {
-                            String initialUri = type.get("uri").toString();
-
-                            boolean continueSearching = true;
-
-                            while(continueSearching) {
-                                // try to find dbonto for dbres
-                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
-
-                                // if not found, try to find dbres for the dbres
-                                if(mapping == null) {
-
-                                    initialUri = getSuperclass(initialUri, "en");
-
-                                    if(initialUri == null){
-                                        //System.out.println("No superclass found, finishing searching");
-                                        continueSearching = false;
-
-                                    } else {
-                                        // superClass uri found
-                                        // check if uri is dbOnto - create hierarchy
-                                        // check if uri is dbRes - continue
-                                        if(initialUri.contains("/resource/")){
-                                            //System.out.println("Found superclass is dbres");
-                                            // do nothing
-                                            // continue to search
-                                        } else if(initialUri.contains("/ontology/")) {
-                                            //System.out.println("Found superclass is dbonto, finishing searching and creating hierarchy");
-                                            // create hierarchy
-                                            continueSearching = false;
-
-                                            OntoRecord initRecord = new OntoRecord();
-                                            initRecord.setUri(initialUri);
-
-                                            while(initRecord != null){
-
-                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                                if(initRecord != null){
-
-                                                    Hypernym hypernymDerived = new Hypernym();
-                                                    hypernymDerived.setEntity(entityTitle);
-                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                                    hypernymDerived.setType(initRecord.getLabel());
-                                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                                    hypernymDerived.setOrigin("thd-derived");
-                                                    hypernymDerived.setAccuracy(type.get("accuracy").toString());
-                                                    hypernymDerived.setBounds(type.get("bounds").toString());
-                                                    hypernymsList.add(hypernymDerived);
-                                                }
-                                            }
-                                        } else {
-                                            // some other uri
-                                            continueSearching = false;
-                                        }
-                                    }
-                                }
-                                // if found, then create hierarchy
-                                else {
-                                    continueSearching = false;
-                                    // creating hierarchy
-                                    OntoRecord initRecord = new OntoRecord();
-                                    initRecord.setUri(initialUri);
-
-                                    while(initRecord != null){
-
-                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                        if(initRecord != null){
-
-                                            Hypernym hypernymDerived = new Hypernym();
-                                            hypernymDerived.setEntity(entityTitle);
-                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                            hypernymDerived.setType(initRecord.getLabel());
-                                            hypernymDerived.setTypeURL(initRecord.getUri());
-                                            hypernymDerived.setOrigin("thd-derived");
-                                            hypernymsList.add(hypernymDerived);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return hypernymsList;
-                    
-                } else {
-                    return hypernymsList;
-                }
-            case "de":
-                
-                resObj = MongoDBClient.getDBInstance().getCollection("de_entities_thd").findOne(queryObj);                
-                
-                if(resObj != null){
-                    
-                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "de", "thd-derived"));
-
-                    BasicDBList typesList = (BasicDBList)resObj.get("types");
-                    DBObject firstType = (DBObject)typesList.get(0);
-                    
-                    String mappingStr = firstType.get("mapping").toString();
-                    // hypernym is mapped to dbpedia ontology
-                    // creating hierarchy from the dbpedia ontology
-                    if(mappingStr.equals("dbOnto")){
-                        
-                        Hypernym hypernym = new Hypernym();
-                        hypernym.setEntity(entityTitle);
-                        hypernym.setEntityURL(resObj.get("uri").toString());
-                        hypernym.setType(firstType.get("label").toString());
-                        hypernym.setTypeURL(firstType.get("uri").toString());
-                        hypernym.setAccuracy(firstType.get("accuracy").toString());
-                        hypernym.setBounds(firstType.get("bounds").toString());
-                        hypernym.setOrigin(firstType.get("origin").toString());
-                        hypernymsList.add(hypernym);
-
-                        OntoRecord initRecord = new OntoRecord();
-                        initRecord.setUri(firstType.get("uri").toString());
-                        
-                        while(initRecord != null){
-                            
-                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-                            
-                            if(initRecord != null){
-                                
-                                Hypernym hypernymDerived = new Hypernym();
-                                hypernymDerived.setEntity(entityTitle);
-                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                hypernymDerived.setType(initRecord.getLabel());
-                                hypernymDerived.setTypeURL(initRecord.getUri());
-                                hypernymDerived.setOrigin("thd-derived");
-                                hypernymsList.add(hypernymDerived);                                
-                            }
-                        }
-                    }
-                    // hypernym is not mapped to dbpedia ontology
-                    // searching for superclass mapped to dbpedia ontology
-                    // if found, for the superclass is created hierarchy
-                    else if(mappingStr.equals("dbRes")) {
-                        
-                        String mappedRes = DBpediaOntologyMapper.getInstance().mapDeResource(firstType.get("uri").toString());
-                        
-                        if(mappedRes != null) {
-                            
-                            Hypernym hypernym2 = new Hypernym();
-                            hypernym2.setEntity(entityTitle);
-                            hypernym2.setEntityURL(resObj.get("uri").toString());
-                            hypernym2.setType(firstType.get("label").toString());
-                            hypernym2.setTypeURL(mappedRes);
-                            hypernym2.setOrigin(firstType.get("origin").toString());
-                            hypernym2.setAccuracy(firstType.get("accuracy").toString());
-                            hypernym2.setBounds(firstType.get("bounds").toString());
-                            hypernymsList.add(hypernym2);
-                            
-                            OntoRecord initRecord = new OntoRecord();
-                            initRecord.setUri(firstType.get("uri").toString());
-
-                            while(initRecord != null){
-
-                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                if(initRecord != null){
-
-                                    Hypernym hypernymDerived = new Hypernym();
-                                    hypernymDerived.setEntity(entityTitle);
-                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                    hypernymDerived.setType(initRecord.getLabel());
-                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                    hypernymDerived.setOrigin("thd-derived");
-                                    hypernymsList.add(hypernymDerived);                                
-                                }
-                            }
-                            // try to derive some more types
-                        } else {
-                            String initialUri = firstType.get("uri").toString();
-
-                            boolean continueSearching = true;
-
-                            while(continueSearching){
-                                // try to find dbonto for dbres
-                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
-
-                                // if not found, try to find dbres for the dbres
-                                if(mapping == null){
-
-                                    initialUri = getSuperclass(initialUri, "de");
-
-                                    if(initialUri == null){
-                                        continueSearching = false;
-
-                                    } else {
-                                        // superClass uri found
-                                        // check if uri is dbOnto - create hierarchy
-                                        // check if uri is dbRes - continue
-
-                                        if(initialUri.contains("/resource/")){
-                                            // do nothing
-                                            // continue to search
-                                        } else if(initialUri.contains("/ontology/")) {
-                                            // create hierarchy
-                                            continueSearching = false;
-
-                                            OntoRecord initRecord = new OntoRecord();
-                                            initRecord.setUri(initialUri);
-
-                                            while(initRecord != null){
-
-                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                                if(initRecord != null){
-
-                                                    Hypernym hypernymDerived = new Hypernym();
-                                                    hypernymDerived.setEntity(entityTitle);
-                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                                    hypernymDerived.setType(initRecord.getLabel());
-                                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                                    hypernymDerived.setOrigin("thd-derived");
-                                                    hypernymsList.add(hypernymDerived);
-
-                                                }
-                                            }
-                                        } else {
-                                            // some other uri
-                                            continueSearching = false;
-                                        }
-                                    }
-                                }
-                                // if found, then create hierarchy
-                                else {
-                                    continueSearching = false;
-                                    // creating hierarchy
-                                    OntoRecord initRecord = new OntoRecord();
-                                    initRecord.setUri(initialUri);
-
-                                    while(initRecord != null){
-
-                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                        if(initRecord != null){
-
-                                            Hypernym hypernymDerived = new Hypernym();
-                                            hypernymDerived.setEntity(entityTitle);
-                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                            hypernymDerived.setType(initRecord.getLabel());
-                                            hypernymDerived.setTypeURL(initRecord.getUri());
-                                            hypernymDerived.setOrigin("thd-derived");
-                                            hypernymsList.add(hypernymDerived);
-
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    return hypernymsList;
-                    
-                } else {
-                    return hypernymsList;
-                }
-                
-            case "nl":
-                
-                resObj = MongoDBClient.getDBInstance().getCollection("nl_entities_thd").findOne(queryObj);                
-
-                if(resObj != null){
-                    
-                    hypernymsList.addAll(YagoOntologyManager.getInstance().getYagoHypernyms(entityTitle, "http://yago-knowledge.org/resource/"+entityTitle.replaceAll(" ", "_"), "en", "thd-derived"));
-
-                    BasicDBList e = (BasicDBList)resObj.get("types");
-                    DBObject type = (DBObject)e.get(0);
-                    
-                    BasicDBList typesList = (BasicDBList)resObj.get("types");
-                    DBObject firstType = (DBObject)typesList.get(0);
-                    
-                    String typeURI = firstType.get("mapping").toString();
-                    // hypernym is mapped to dbpedia ontology
-                    // creating hierarchy from the dbpedia ontology
-                    if(typeURI.equals("dbOnto")){
-                        
-                        Hypernym hypernym = new Hypernym();
-                        hypernym.setEntity(entityTitle);
-                        hypernym.setEntityURL(resObj.get("uri").toString());
-                        hypernym.setType(type.get("label").toString());
-                        hypernym.setTypeURL(type.get("uri").toString());
-                        hypernym.setAccuracy(type.get("accuracy").toString());
-                        hypernym.setBounds(type.get("bounds").toString());
-                        hypernym.setOrigin(type.get("origin").toString());
-                        hypernymsList.add(hypernym);
-                    
-                        OntoRecord initRecord = new OntoRecord();
-                        initRecord.setUri(firstType.get("uri").toString());
-                        
-                        while(initRecord != null){
-                            
-                            initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-                            
-                            if(initRecord != null){
-                                
-                                Hypernym hypernymDerived = new Hypernym();
-                                hypernymDerived.setEntity(entityTitle);
-                                hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                hypernymDerived.setType(initRecord.getLabel());
-                                hypernymDerived.setTypeURL(initRecord.getUri());
-                                hypernymDerived.setOrigin("thd-derived");
-                                hypernymsList.add(hypernymDerived);                                
-                            }
-                        }
-                    }
-                    // hypernym is not mapped to dbpedia ontology
-                    // searching for superclass mapped to dbpedia ontology
-                    // if found, for the superclass is created hierarchy
-                    else if(typeURI.equals("dbRes")) {
-
-                        String mappedRes = DBpediaOntologyMapper.getInstance().mapNlResource(type.get("uri").toString());
-                        if(mappedRes != null) {
-                            Hypernym hypernym = new Hypernym();
-                            hypernym.setEntity(entityTitle);
-                            hypernym.setEntityURL(resObj.get("uri").toString());
-                            hypernym.setType(type.get("label").toString());
-                            hypernym.setTypeURL(mappedRes);
-                            hypernym.setAccuracy(type.get("accuracy").toString());
-                            hypernym.setBounds(type.get("bounds").toString());
-                            hypernym.setOrigin(type.get("origin").toString());
-                            hypernymsList.add(hypernym);
-
-                            OntoRecord initRecord = new OntoRecord();
-                            initRecord.setUri(mappedRes.toString());
-
-                            while(initRecord != null){
-
-                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                if(initRecord != null){
-
-                                    Hypernym hypernymDerived = new Hypernym();
-                                    hypernymDerived.setEntity(entityTitle);
-                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                    hypernymDerived.setType(initRecord.getLabel());
-                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                    hypernymDerived.setOrigin("thd-derived");
-                                    hypernymsList.add(hypernymDerived);                                
-                                }
-                            }
-                        } else {
-                            
-                            String initialUri = firstType.get("uri").toString();
-
-                            boolean continueSearching = true;
-
-                            while(continueSearching){
-                                // try to find dbonto for dbres
-                                DBpediaMapping mapping = getSubclassConfirmed(initialUri);
-
-                                // if not found, try to find dbres for the dbres
-                                if(mapping == null){
-
-                                    initialUri = getSuperclass(initialUri, "nl");
-
-                                    if(initialUri == null){
-                                        //System.out.println("No superclass found, finishing searching");
-                                        continueSearching = false;
-
-                                    } else {
-
-                                        // superClass uri found
-                                        // check if uri is dbOnto - create hierarchy
-                                        // check if uri is dbRes - continue
-
-                                        if(initialUri.contains("/resource/")){
-                                            // do nothing
-                                            // continue to search
-                                        } else if(initialUri.contains("/ontology/")) {
-                                            // create hierarchy
-                                            continueSearching = false;
-
-                                            OntoRecord initRecord = new OntoRecord();
-                                            initRecord.setUri(initialUri);
-
-                                            while(initRecord != null){
-
-                                                initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                                if(initRecord != null){
-
-                                                    Hypernym hypernymDerived = new Hypernym();
-                                                    hypernymDerived.setEntity(entityTitle);
-                                                    hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                                    hypernymDerived.setType(initRecord.getLabel());
-                                                    hypernymDerived.setTypeURL(initRecord.getUri());
-                                                    hypernymDerived.setOrigin("thd-derived");
-                                                    hypernymsList.add(hypernymDerived);
-
-                                                }
-                                            }
-                                        } else {
-                                            // some other uri
-                                            continueSearching = false;
-                                        }
-                                    }
-                                }
-                                // if found, then create hierarchy
-                                else {
-                                    continueSearching = false;
-                                    // creating hierarchy
-                                    OntoRecord initRecord = new OntoRecord();
-                                    initRecord.setUri(initialUri);
-
-                                    while(initRecord != null){
-
-                                        initRecord = DBpediaOntologyManager.getInstance().getSubclass(initRecord.getUri(), lang);
-
-                                        if(initRecord != null){
-
-                                            Hypernym hypernymDerived = new Hypernym();
-                                            hypernymDerived.setEntity(entityTitle);
-                                            hypernymDerived.setEntityURL(resObj.get("uri").toString());
-                                            hypernymDerived.setType(initRecord.getLabel());
-                                            hypernymDerived.setTypeURL(initRecord.getUri());
-                                            hypernymDerived.setOrigin("thd-derived");
-                                            hypernymsList.add(hypernymDerived);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    return hypernymsList;
-                    
-                } else {
-                    return hypernymsList;
-                }
-        }
-        return null;
-    }    
     public HashSet getDBpediaHypernyms(String entityTitle, String lang) throws UnknownHostException{
         
         HashSet hypernymsList = new HashSet();
@@ -2947,49 +2940,49 @@ public class THDWorker {
         return hypernymsList;
     }
 
-    public DBpediaMapping getSubclassConfirmed(String res) throws UnknownHostException{
-        
-        BasicDBObject queryObj2 = new BasicDBObject();
-        queryObj2.append("label", res);
-        DBObject resObj2 = MongoDBClient.getDBInstance().getCollection("test_en_entities_superclass").findOne(queryObj2);
-        
-        if(resObj2 != null){
-            BasicDBList e = (BasicDBList)resObj2.get("types");
-            DBObject type = (DBObject)e.get(0);
-            
-            DBpediaMapping result = new DBpediaMapping();
-            result.setLabel(type.get("label").toString());
-            result.setUri(type.get("uri").toString());
-            
-            return result;
-        } else {
-            return null;
-        }        
-    }
+//    public DBpediaMapping getSubclassConfirmed(String res) throws UnknownHostException{
+//        
+//        BasicDBObject queryObj2 = new BasicDBObject();
+//        queryObj2.append("label", res);
+//        DBObject resObj2 = MongoDBClient.getDBInstance().getCollection("test_en_entities_superclass").findOne(queryObj2);
+//        
+//        if(resObj2 != null){
+//            BasicDBList e = (BasicDBList)resObj2.get("types");
+//            DBObject type = (DBObject)e.get(0);
+//            
+//            DBpediaMapping result = new DBpediaMapping();
+//            result.setLabel(type.get("label").toString());
+//            result.setUri(type.get("uri").toString());
+//            
+//            return result;
+//        } else {
+//            return null;
+//        }        
+//    }
     
-    public String getSuperclass(String uri, String lang) throws UnknownHostException{
-        
-        BasicDBObject tempQueryObj = new BasicDBObject();
-        tempQueryObj.append("uri", uri);
-        tempQueryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
-        DBObject tempResObj = null;
-        
-        switch (lang) {
-            case "en":
-                tempResObj = MongoDBClient.getDBInstance().getCollection("test_en_entities").findOne(tempQueryObj);
-            case "de":
-                tempResObj = MongoDBClient.getDBInstance().getCollection("test_de_entities").findOne(tempQueryObj);           
-        }
-        
-        if(tempResObj != null){
-            BasicDBList typesList = (BasicDBList)tempResObj.get("types");
-            DBObject tmpTypeObj = (DBObject) typesList.get(0);
-            return tmpTypeObj.get("uri").toString();
-        } else {
-            return null;
-        }
-        
-    }
+//    public String getSuperclass(String uri, String lang) throws UnknownHostException{
+//        
+//        BasicDBObject tempQueryObj = new BasicDBObject();
+//        tempQueryObj.append("uri", uri);
+//        tempQueryObj.append("types", new BasicDBObject().append("$elemMatch", new BasicDBObject().append("origin", "thd")));
+//        DBObject tempResObj = null;
+//        
+//        switch (lang) {
+//            case "en":
+//                tempResObj = MongoDBClient.getDBInstance().getCollection("test_en_entities").findOne(tempQueryObj);
+//            case "de":
+//                tempResObj = MongoDBClient.getDBInstance().getCollection("test_de_entities").findOne(tempQueryObj);           
+//        }
+//        
+//        if(tempResObj != null){
+//            BasicDBList typesList = (BasicDBList)tempResObj.get("types");
+//            DBObject tmpTypeObj = (DBObject) typesList.get(0);
+//            return tmpTypeObj.get("uri").toString();
+//        } else {
+//            return null;
+//        }
+//    }
+    
     public ArrayList<Hypernym> removeDuplicates(List<Hypernym> l) {
         Set<Hypernym> s = new TreeSet<Hypernym>(new Comparator<Hypernym>() {
 
@@ -3007,6 +3000,6 @@ public class THDWorker {
             }
         });
         s.addAll(l);
-        return new ArrayList<Hypernym>(s);
-   }
+        return new ArrayList<Hypernym>(s);  
+    }
 }

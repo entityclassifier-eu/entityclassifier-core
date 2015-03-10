@@ -70,7 +70,8 @@ public class LuceneSearch {
         return getWikiSearch();
     }
     
-    public LinkedEntity findWikipediaArticleSkipDisambiguationPage(String query, String lang, String kb){
+    public LinkedEntity findWikipediaArticleSkipDisambiguationPage(String query, String lang, String kb) {
+        
         URL url = null;
         LinkedEntity linkedEntity = null;
         try {
@@ -140,6 +141,8 @@ public class LuceneSearch {
             ins.close();
 
             return linkedEntity;
+        } catch (java.net.UnknownHostException ex) {
+            Logger.getLogger(LuceneSearch.class.getName()).log(Level.SEVERE, null, ex);
         } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(LuceneSearch.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MalformedURLException ex) {
